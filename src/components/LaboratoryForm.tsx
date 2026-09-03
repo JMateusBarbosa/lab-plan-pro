@@ -46,14 +46,14 @@ export function LaboratoryForm({
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
-    if (!values.name.trim()) nextErrors.name = "Informe o nome do laboratório.";
-    if (!values.schoolName.trim()) nextErrors.schoolName = "Informe a unidade/escola.";
-    if (!values.email.trim()) nextErrors.email = "Informe o e-mail de acesso.";
+    if (!values.name.trim()) nextErrors['name'] = "Informe o nome do laboratório.";
+    if (!values.schoolName.trim()) nextErrors['schoolName'] = "Informe a unidade/escola.";
+    if (!values.email.trim()) nextErrors['email'] = "Informe o e-mail de acesso.";
     if (mode === "create") {
-      if (!values.password) nextErrors.password = "Informe a senha provisória.";
-      if (!values.confirmPassword) nextErrors.confirmPassword = "Confirme a senha.";
+      if (!values.password) nextErrors['password'] = "Informe a senha provisória.";
+      if (!values.confirmPassword) nextErrors['confirmPassword'] = "Confirme a senha.";
       if (values.password && values.confirmPassword && values.password !== values.confirmPassword) {
-        nextErrors.confirmPassword = "As senhas não conferem.";
+        nextErrors['confirmPassword'] = "As senhas não conferem.";
       }
     }
     setErrors(nextErrors);
