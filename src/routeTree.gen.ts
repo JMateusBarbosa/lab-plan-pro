@@ -13,6 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LaboratorioRouteImport } from './routes/laboratorio'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminLaboratoriosIndexRouteImport } from './routes/admin.laboratorios.index'
+import { Route as AdminLaboratoriosNovoRouteImport } from './routes/admin.laboratorios.novo'
+import { Route as AdminLaboratoriosIdIndexRouteImport } from './routes/admin.laboratorios.$id.index'
+import { Route as AdminLaboratoriosIdEditarRouteImport } from './routes/admin.laboratorios.$id.editar'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +38,48 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminLaboratoriosIndexRoute = AdminLaboratoriosIndexRouteImport.update({
+  id: '/admin/laboratorios/',
+  path: '/admin/laboratorios/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLaboratoriosNovoRoute = AdminLaboratoriosNovoRouteImport.update({
+  id: '/admin/laboratorios/novo',
+  path: '/admin/laboratorios/novo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLaboratoriosIdIndexRoute =
+  AdminLaboratoriosIdIndexRouteImport.update({
+    id: '/admin/laboratorios/$id/',
+    path: '/admin/laboratorios/$id/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminLaboratoriosIdEditarRoute =
+  AdminLaboratoriosIdEditarRouteImport.update({
+    id: '/admin/laboratorios/$id/editar',
+    path: '/admin/laboratorios/$id/editar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/laboratorio': typeof LaboratorioRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/laboratorios/novo': typeof AdminLaboratoriosNovoRoute
+  '/admin/laboratorios/': typeof AdminLaboratoriosIndexRoute
+  '/admin/laboratorios/$id/editar': typeof AdminLaboratoriosIdEditarRoute
+  '/admin/laboratorios/$id/': typeof AdminLaboratoriosIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/laboratorio': typeof LaboratorioRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/laboratorios/novo': typeof AdminLaboratoriosNovoRoute
+  '/admin/laboratorios': typeof AdminLaboratoriosIndexRoute
+  '/admin/laboratorios/$id/editar': typeof AdminLaboratoriosIdEditarRoute
+  '/admin/laboratorios/$id': typeof AdminLaboratoriosIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +87,42 @@ export interface FileRoutesById {
   '/laboratorio': typeof LaboratorioRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/laboratorios/novo': typeof AdminLaboratoriosNovoRoute
+  '/admin/laboratorios/': typeof AdminLaboratoriosIndexRoute
+  '/admin/laboratorios/$id/editar': typeof AdminLaboratoriosIdEditarRoute
+  '/admin/laboratorios/$id/': typeof AdminLaboratoriosIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/laboratorio' | '/admin/login' | '/admin/'
+  fullPaths:
+    | '/'
+    | '/laboratorio'
+    | '/admin/login'
+    | '/admin/'
+    | '/admin/laboratorios/novo'
+    | '/admin/laboratorios/'
+    | '/admin/laboratorios/$id/editar'
+    | '/admin/laboratorios/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/laboratorio' | '/admin/login' | '/admin'
-  id: '__root__' | '/' | '/laboratorio' | '/admin/login' | '/admin/'
+  to:
+    | '/'
+    | '/laboratorio'
+    | '/admin/login'
+    | '/admin'
+    | '/admin/laboratorios/novo'
+    | '/admin/laboratorios'
+    | '/admin/laboratorios/$id/editar'
+    | '/admin/laboratorios/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/laboratorio'
+    | '/admin/login'
+    | '/admin/'
+    | '/admin/laboratorios/novo'
+    | '/admin/laboratorios/'
+    | '/admin/laboratorios/$id/editar'
+    | '/admin/laboratorios/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +130,10 @@ export interface RootRouteChildren {
   LaboratorioRoute: typeof LaboratorioRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminLaboratoriosNovoRoute: typeof AdminLaboratoriosNovoRoute
+  AdminLaboratoriosIndexRoute: typeof AdminLaboratoriosIndexRoute
+  AdminLaboratoriosIdEditarRoute: typeof AdminLaboratoriosIdEditarRoute
+  AdminLaboratoriosIdIndexRoute: typeof AdminLaboratoriosIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +166,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/laboratorios/': {
+      id: '/admin/laboratorios/'
+      path: '/admin/laboratorios'
+      fullPath: '/admin/laboratorios/'
+      preLoaderRoute: typeof AdminLaboratoriosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/laboratorios/novo': {
+      id: '/admin/laboratorios/novo'
+      path: '/admin/laboratorios/novo'
+      fullPath: '/admin/laboratorios/novo'
+      preLoaderRoute: typeof AdminLaboratoriosNovoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/laboratorios/$id/': {
+      id: '/admin/laboratorios/$id/'
+      path: '/admin/laboratorios/$id'
+      fullPath: '/admin/laboratorios/$id/'
+      preLoaderRoute: typeof AdminLaboratoriosIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/laboratorios/$id/editar': {
+      id: '/admin/laboratorios/$id/editar'
+      path: '/admin/laboratorios/$id/editar'
+      fullPath: '/admin/laboratorios/$id/editar'
+      preLoaderRoute: typeof AdminLaboratoriosIdEditarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +202,10 @@ const rootRouteChildren: RootRouteChildren = {
   LaboratorioRoute: LaboratorioRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminLaboratoriosNovoRoute: AdminLaboratoriosNovoRoute,
+  AdminLaboratoriosIndexRoute: AdminLaboratoriosIndexRoute,
+  AdminLaboratoriosIdEditarRoute: AdminLaboratoriosIdEditarRoute,
+  AdminLaboratoriosIdIndexRoute: AdminLaboratoriosIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
