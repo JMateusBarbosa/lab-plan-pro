@@ -14,6 +14,22 @@ export const mockLaboratories: Laboratory[] = [
     city: "Maués",
     state: "AM",
     status: "ativo",
+    computerCount: 14,
+    availableTimes: [
+      "07:30",
+      "08:00",
+      "08:30",
+      "09:00",
+      "10:00",
+      "11:00",
+      "11:30",
+      "14:00",
+      "15:00",
+      "16:00",
+      "17:00",
+      "18:00",
+      "19:00",
+    ],
     createdAt: "2025-02-10",
   },
   {
@@ -26,6 +42,8 @@ export const mockLaboratories: Laboratory[] = [
     city: "Manaus",
     state: "AM",
     status: "ativo",
+    computerCount: 8,
+    availableTimes: ["08:00", "09:00", "10:00", "14:00", "15:00"],
     createdAt: "2025-04-22",
   },
   {
@@ -38,6 +56,8 @@ export const mockLaboratories: Laboratory[] = [
     city: "Manaus",
     state: "AM",
     status: "inativo",
+    computerCount: 20,
+    availableTimes: ["07:30", "09:30", "13:30", "16:30", "19:00"],
     createdAt: "2025-06-05",
   },
   {
@@ -50,6 +70,8 @@ export const mockLaboratories: Laboratory[] = [
     city: "Itacoatiara",
     state: "AM",
     status: "ativo",
+    computerCount: 12,
+    availableTimes: ["08:00", "10:00", "14:00", "18:00"],
     createdAt: "2025-07-14",
   },
   {
@@ -62,6 +84,8 @@ export const mockLaboratories: Laboratory[] = [
     city: "Parintins",
     state: "AM",
     status: "ativo",
+    computerCount: 10,
+    availableTimes: ["07:30", "08:30", "11:30", "15:00", "17:00"],
     createdAt: "2025-08-01",
   },
 ];
