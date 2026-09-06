@@ -36,6 +36,8 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
       city: values.city,
       state: values.state,
       status: values.status,
+      computerCount: Number(values.computerCount) || 1,
+      availableTimes: [...values.availableTimes].sort(),
       createdAt: new Date().toISOString().slice(0, 10),
     };
     setLaboratories((prev) => [lab, ...prev]);
@@ -56,6 +58,8 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
               city: values.city,
               state: values.state,
               status: values.status,
+              computerCount: Number(values.computerCount) || 1,
+              availableTimes: [...values.availableTimes].sort(),
             }
           : lab,
       ),
@@ -86,4 +90,15 @@ export function useLaboratories() {
   const ctx = useContext(LaboratoriesContext);
   if (!ctx) throw new Error("useLaboratories deve ser usado dentro de LaboratoriesProvider");
   return ctx;
+}
+
+/**
+ * Laboratório "logado" — mock único até existir autenticação real.
+ * Futuramente virá da sessão do usuário autenticado.
+ */
+export const CURRENT_LABORATORY_ID = "1";
+
+export function useCurrentLaboratory() {
+  const { getById } = useLaboratories();
+  return getById(CURRENT_LABORATORY_ID);
 }
