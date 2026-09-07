@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { useCurrentLaboratory, CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
 import { useExams } from "@/lib/exams-store";
+import { getLocalDateString } from "@/lib/date";
 import { examTypeLabels } from "@/types/exam";
 
 export const Route = createFileRoute("/laboratorio/")({
@@ -32,7 +33,7 @@ function LaboratorioDashboard() {
   const lab = useCurrentLaboratory();
   const { listByLaboratory } = useExams();
   const exams = listByLaboratory(CURRENT_LABORATORY_ID);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const examsToday = exams.filter((e) => e.examDate === today);
 
   return (
