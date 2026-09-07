@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,6 +25,21 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const [bootstrapAvailable, setBootstrapAvailable] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    supabase.rpc("is_bootstrap_available").then(({ data, error }) => {
+      if (!active) return;
+      if (!error) setBootstrapAvailable(Boolean(data));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
       <Card className="w-full max-w-lg">
@@ -40,12 +57,16 @@ function Index() {
           <Button asChild variant="outline">
             <Link to="/laboratorio/login">Entrar como Laboratório</Link>
           </Button>
-          <Button asChild variant="ghost">
-            <Link to="/admin/cadastro">Criar primeiro administrador</Link>
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            A criação de administrador é aceita apenas na configuração inicial do sistema.
-          </p>
+          {bootstrapAvailable ? (
+            <>
+              <Button asChild variant="ghost">
+                <Link to="/admin/cadastro">Criar primeiro administrador</Link>
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                A criação de administrador é aceita apenas na configuração inicial do sistema.
+              </p>
+            </>
+          ) : null}
         </CardContent>
       </Card>
     </main>
