@@ -20,7 +20,7 @@ export const Route = createFileRoute("/laboratorio/provas/nova")({
 function NovaProva() {
   const navigate = useNavigate();
   const lab = useCurrentLaboratory();
-  const { create } = useExams();
+  const { create, listByLaboratory } = useExams();
 
   if (!lab) {
     return (
@@ -39,7 +39,19 @@ function NovaProva() {
           laboratory={lab}
           onCancel={() => navigate({ to: "/laboratorio/provas" })}
           onSubmit={(values) => {
-            create(CURRENT_LABORATORY_ID, values);
+            const hasConflict = listByLaboratory(CURRENT_LABORATORY_ID).some(
+              (exam) =>
+                exam.examDate === values.examDate &&
+                exam.examTime === values.examTime &&
+                exam.pcNumber === values.pcNumber,
+            );
+
+            if (hasConflict) {
+              toast.error("Este computador já está agendado para a mesma data e horário.");
+              return;
+            }
+
+            create(CURRENT_LABORATORY_ID, { ...values, status: "pendente" });
             toast.success("Prova agendada com sucesso.");
             navigate({ to: "/laboratorio/provas" });
           }}
