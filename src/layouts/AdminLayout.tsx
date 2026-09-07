@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, FlaskConical, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 const navItems = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
@@ -12,6 +13,12 @@ const navItems = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const handleLogout = async () => {
+    onNavigate?.();
+    await supabase.auth.signOut();
+    navigate({ to: "/admin/login" });
+  };
 
   return (
     <nav className="flex h-full flex-col gap-1 p-3">
@@ -38,10 +45,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <Button
         variant="ghost"
         className="mt-auto justify-start gap-2 text-muted-foreground"
-        onClick={() => {
-          onNavigate?.();
-          navigate({ to: "/admin/login" });
-        }}
+        onClick={handleLogout}
       >
         <LogOut className="h-4 w-4" />
         Sair
@@ -51,7 +55,50 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AdminLayout({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    const checkAccess = async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !userData.user) {
+        if (active) navigate({ to: "/admin/login" });
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userData.user.id)
+        .single();
+
+      if (profileError || profile?.role !== "admin") {
+        await supabase.auth.signOut();
+        if (active) navigate({ to: "/admin/login" });
+        return;
+      }
+
+      if (active) setCheckingAccess(false);
+    };
+
+    void checkAccess();
+
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
+
+  if (checkingAccess) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+        <p className="text-sm text-muted-foreground">Verificando acesso...</p>
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -70,7 +117,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </Link>
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-sm text-muted-foreground sm:inline">Administrador</span>
-          {/* Espaço reservado para avatar / menu de usuário */}
           <div
             aria-hidden
             className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium"
