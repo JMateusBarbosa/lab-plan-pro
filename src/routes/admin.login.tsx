@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
@@ -22,14 +23,44 @@ function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setError("");
+
     if (!email.trim() || !password.trim()) {
       setError("Preencha e-mail e senha.");
       return;
     }
-    // Navegação simulada — autenticação real será implementada futuramente.
+
+    setLoading(true);
+
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (authError || !data.user) {
+      setLoading(false);
+      setError("E-mail ou senha inválidos.");
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+
+    if (profileError || profile?.role !== "admin") {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("Esta conta não possui acesso administrativo.");
+      return;
+    }
+
+    setLoading(false);
     navigate({ to: "/admin" });
   };
 
@@ -47,6 +78,7 @@ function AdminLogin() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -56,13 +88,14 @@ function AdminLogin() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
-            <Button type="submit" className="w-full">
-              Entrar
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
             <Button asChild variant="ghost" className="w-full">
               <Link to="/">Voltar</Link>
