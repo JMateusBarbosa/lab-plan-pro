@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { examStatusLabels, examTypeLabels, type ExamFormValues } from "@/types/exam";
 import { buildComputerList, type Laboratory } from "@/types/laboratory";
+import { getLocalDateString } from "@/lib/date";
 
 interface ExamFormProps {
   mode: "create" | "edit";
@@ -25,7 +26,7 @@ const emptyValues: ExamFormValues = {
   studentName: "",
   module: "",
   pcNumber: 0,
-  examDate: new Date().toISOString().slice(0, 10),
+  examDate: getLocalDateString(),
   examTime: "",
   examType: "P1",
   status: "pendente",
@@ -53,7 +54,7 @@ export function ExamForm({
     if (!values.examTime) nextErrors['examTime'] = "Selecione o horário.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
-    onSubmit(values);
+    onSubmit(mode === "create" ? { ...values, status: "pendente" } : values);
   };
 
   return (
@@ -165,28 +166,30 @@ export function ExamForm({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Status *</Label>
-            <Select
-              value={values.status}
-              onValueChange={(v) =>
-                setValues((p) => ({ ...p, status: v as ExamFormValues["status"] }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(examStatusLabels) as Array<keyof typeof examStatusLabels>).map(
-                  (s) => (
-                    <SelectItem key={s} value={s}>
-                      {examStatusLabels[s]}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          {mode === "edit" ? (
+            <div className="space-y-1.5">
+              <Label>Status *</Label>
+              <Select
+                value={values.status}
+                onValueChange={(v) =>
+                  setValues((p) => ({ ...p, status: v as ExamFormValues["status"] }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(examStatusLabels) as Array<keyof typeof examStatusLabels>).map(
+                    (s) => (
+                      <SelectItem key={s} value={s}>
+                        {examStatusLabels[s]}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
