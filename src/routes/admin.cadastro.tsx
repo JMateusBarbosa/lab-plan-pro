@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,11 +22,30 @@ function AdminCadastro() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bootstrapAvailable, setBootstrapAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.rpc("is_bootstrap_available").then(({ data, error: rpcError }) => {
+      if (rpcError) {
+        setError("Não foi possível verificar o estado inicial do sistema.");
+        setBootstrapAvailable(false);
+        return;
+      }
+      setBootstrapAvailable(Boolean(data));
+    });
+  }, []);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
+    setSuccess("");
+
+    if (!bootstrapAvailable) {
+      setError("O administrador inicial já foi criado. Use a tela de login.");
+      return;
+    }
 
     if (!email.trim() || !password || !confirmPassword) {
       setError("Preencha todos os campos.");
@@ -60,8 +79,31 @@ function AdminCadastro() {
       return;
     }
 
-    navigate({ to: "/admin/login" });
+    setBootstrapAvailable(false);
+    setSuccess(
+      "Administrador criado. Confirme o e-mail recebido antes de fazer login. Verifique também a caixa de spam.",
+    );
   };
+
+  if (bootstrapAvailable === false && !success) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>Administrador já configurado</CardTitle>
+            <CardDescription>
+              A configuração inicial deste sistema já foi concluída.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link to="/admin/login">Ir para o login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
@@ -73,45 +115,54 @@ function AdminCadastro() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+          {success ? (
+            <div className="space-y-4">
+              <p className="text-sm text-foreground">{success}</p>
+              <Button asChild className="w-full">
+                <Link to="/admin/login">Ir para o login</Link>
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword">Confirmar senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-            {error ? <p className="text-xs text-destructive">{error}</p> : null}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Criando..." : "Criar administrador"}
-            </Button>
-            <Button asChild variant="ghost" className="w-full">
-              <Link to="/">Voltar</Link>
-            </Button>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword">Confirmar senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+              {error ? <p className="text-xs text-destructive">{error}</p> : null}
+              <Button type="submit" className="w-full" disabled={loading || bootstrapAvailable !== true}>
+                {loading ? "Criando..." : "Criar administrador"}
+              </Button>
+              <Button asChild variant="ghost" className="w-full">
+                <Link to="/">Voltar</Link>
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </main>
