@@ -43,7 +43,12 @@ function AdminLogin() {
 
     if (authError || !data.user) {
       setLoading(false);
-      setError("E-mail ou senha inválidos.");
+      const message = authError?.message?.toLowerCase() ?? "";
+      if (message.includes("email not confirmed")) {
+        setError("Seu e-mail ainda não foi confirmado. Abra a mensagem enviada pelo Supabase e confirme a conta antes de entrar.");
+      } else {
+        setError("E-mail ou senha inválidos.");
+      }
       return;
     }
 
