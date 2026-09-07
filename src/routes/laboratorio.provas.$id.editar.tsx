@@ -22,7 +22,7 @@ function EditarProva() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const lab = useCurrentLaboratory();
-  const { getById, update } = useExams();
+  const { getById, update, listByLaboratory } = useExams();
   const exam = getById(id);
 
   if (!lab || !exam || exam.laboratoryId !== CURRENT_LABORATORY_ID) {
@@ -48,6 +48,19 @@ function EditarProva() {
           initialValues={exam}
           onCancel={() => navigate({ to: "/laboratorio/provas/$id", params: { id } })}
           onSubmit={(values) => {
+            const hasConflict = listByLaboratory(CURRENT_LABORATORY_ID).some(
+              (candidate) =>
+                candidate.id !== id &&
+                candidate.examDate === values.examDate &&
+                candidate.examTime === values.examTime &&
+                candidate.pcNumber === values.pcNumber,
+            );
+
+            if (hasConflict) {
+              toast.error("Este computador já está agendado para a mesma data e horário.");
+              return;
+            }
+
             update(id, values);
             toast.success("Alterações salvas com sucesso.");
             navigate({ to: "/laboratorio/provas/$id", params: { id } });
