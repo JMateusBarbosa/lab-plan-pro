@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { mockExams } from "@/data/exams";
+import { getLocalDateString } from "@/lib/date";
 import type { Exam, ExamFormValues } from "@/types/exam";
 
 /**
@@ -38,7 +39,7 @@ export function ExamsProvider({ children }: { children: ReactNode }) {
       examTime: values.examTime,
       examType: values.examType,
       status: values.status,
-      createdAt: new Date().toISOString().slice(0, 10),
+      createdAt: getLocalDateString(),
     };
     setExams((prev) => [exam, ...prev]);
     return exam;
