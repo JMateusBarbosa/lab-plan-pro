@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as LaboratorioRouteImport } from './routes/laboratorio'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminLaboratoriosIndexRouteImport } from './routes/admin.laboratorios.index'
@@ -21,11 +20,6 @@ import { Route as AdminLaboratoriosIdEditarRouteImport } from './routes/admin.la
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LaboratorioRoute = LaboratorioRouteImport.update({
-  id: '/laboratorio',
-  path: '/laboratorio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -63,7 +57,6 @@ const AdminLaboratoriosIdEditarRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/laboratorio': typeof LaboratorioRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/laboratorios/novo': typeof AdminLaboratoriosNovoRoute
@@ -73,7 +66,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/laboratorio': typeof LaboratorioRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin': typeof AdminIndexRoute
   '/admin/laboratorios/novo': typeof AdminLaboratoriosNovoRoute
@@ -84,7 +76,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/laboratorio': typeof LaboratorioRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/laboratorios/novo': typeof AdminLaboratoriosNovoRoute
@@ -96,7 +87,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/laboratorio'
     | '/admin/login'
     | '/admin/'
     | '/admin/laboratorios/novo'
@@ -106,7 +96,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/laboratorio'
     | '/admin/login'
     | '/admin'
     | '/admin/laboratorios/novo'
@@ -116,7 +105,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/laboratorio'
     | '/admin/login'
     | '/admin/'
     | '/admin/laboratorios/novo'
@@ -127,7 +115,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LaboratorioRoute: typeof LaboratorioRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminLaboratoriosNovoRoute: typeof AdminLaboratoriosNovoRoute
@@ -143,13 +130,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/laboratorio': {
-      id: '/laboratorio'
-      path: '/laboratorio'
-      fullPath: '/laboratorio'
-      preLoaderRoute: typeof LaboratorioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -199,7 +179,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LaboratorioRoute: LaboratorioRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminLaboratoriosNovoRoute: AdminLaboratoriosNovoRoute,
