@@ -20,6 +20,8 @@ import { Route as LaboratorioProvasIndexRouteImport } from './routes/laboratorio
 import { Route as LaboratorioProvasNovaRouteImport } from './routes/laboratorio.provas.nova'
 import { Route as AdminLaboratoriosIdIndexRouteImport } from './routes/admin.laboratorios.$id.index'
 import { Route as AdminLaboratoriosIdEditarRouteImport } from './routes/admin.laboratorios.$id.editar'
+import { Route as LaboratorioProvasIdIndexRouteImport } from './routes/laboratorio.provas.$id.index'
+import { Route as LaboratorioProvasIdEditarRouteImport } from './routes/laboratorio.provas.$id.editar'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -78,6 +80,18 @@ const AdminLaboratoriosIdEditarRoute =
     path: '/admin/laboratorios/$id/editar',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LaboratorioProvasIdIndexRoute =
+  LaboratorioProvasIdIndexRouteImport.update({
+    id: '/laboratorio/provas/$id/',
+    path: '/laboratorio/provas/$id/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LaboratorioProvasIdEditarRoute =
+  LaboratorioProvasIdEditarRouteImport.update({
+    id: '/laboratorio/provas/$id/editar',
+    path: '/laboratorio/provas/$id/editar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -90,7 +104,9 @@ export interface FileRoutesByFullPath {
   '/admin/laboratorios/': typeof AdminLaboratoriosIndexRoute
   '/laboratorio/provas/': typeof LaboratorioProvasIndexRoute
   '/admin/laboratorios/$id/editar': typeof AdminLaboratoriosIdEditarRoute
+  '/laboratorio/provas/$id/editar': typeof LaboratorioProvasIdEditarRoute
   '/admin/laboratorios/$id/': typeof AdminLaboratoriosIdIndexRoute
+  '/laboratorio/provas/$id/': typeof LaboratorioProvasIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -103,7 +119,9 @@ export interface FileRoutesByTo {
   '/admin/laboratorios': typeof AdminLaboratoriosIndexRoute
   '/laboratorio/provas': typeof LaboratorioProvasIndexRoute
   '/admin/laboratorios/$id/editar': typeof AdminLaboratoriosIdEditarRoute
+  '/laboratorio/provas/$id/editar': typeof LaboratorioProvasIdEditarRoute
   '/admin/laboratorios/$id': typeof AdminLaboratoriosIdIndexRoute
+  '/laboratorio/provas/$id': typeof LaboratorioProvasIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,7 +135,9 @@ export interface FileRoutesById {
   '/admin/laboratorios/': typeof AdminLaboratoriosIndexRoute
   '/laboratorio/provas/': typeof LaboratorioProvasIndexRoute
   '/admin/laboratorios/$id/editar': typeof AdminLaboratoriosIdEditarRoute
+  '/laboratorio/provas/$id/editar': typeof LaboratorioProvasIdEditarRoute
   '/admin/laboratorios/$id/': typeof AdminLaboratoriosIdIndexRoute
+  '/laboratorio/provas/$id/': typeof LaboratorioProvasIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -132,7 +152,9 @@ export interface FileRouteTypes {
     | '/admin/laboratorios/'
     | '/laboratorio/provas/'
     | '/admin/laboratorios/$id/editar'
+    | '/laboratorio/provas/$id/editar'
     | '/admin/laboratorios/$id/'
+    | '/laboratorio/provas/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -145,7 +167,9 @@ export interface FileRouteTypes {
     | '/admin/laboratorios'
     | '/laboratorio/provas'
     | '/admin/laboratorios/$id/editar'
+    | '/laboratorio/provas/$id/editar'
     | '/admin/laboratorios/$id'
+    | '/laboratorio/provas/$id'
   id:
     | '__root__'
     | '/'
@@ -158,7 +182,9 @@ export interface FileRouteTypes {
     | '/admin/laboratorios/'
     | '/laboratorio/provas/'
     | '/admin/laboratorios/$id/editar'
+    | '/laboratorio/provas/$id/editar'
     | '/admin/laboratorios/$id/'
+    | '/laboratorio/provas/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,7 +198,9 @@ export interface RootRouteChildren {
   AdminLaboratoriosIndexRoute: typeof AdminLaboratoriosIndexRoute
   LaboratorioProvasIndexRoute: typeof LaboratorioProvasIndexRoute
   AdminLaboratoriosIdEditarRoute: typeof AdminLaboratoriosIdEditarRoute
+  LaboratorioProvasIdEditarRoute: typeof LaboratorioProvasIdEditarRoute
   AdminLaboratoriosIdIndexRoute: typeof AdminLaboratoriosIdIndexRoute
+  LaboratorioProvasIdIndexRoute: typeof LaboratorioProvasIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -254,6 +282,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLaboratoriosIdEditarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/laboratorio/provas/$id/': {
+      id: '/laboratorio/provas/$id/'
+      path: '/laboratorio/provas/$id'
+      fullPath: '/laboratorio/provas/$id/'
+      preLoaderRoute: typeof LaboratorioProvasIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/laboratorio/provas/$id/editar': {
+      id: '/laboratorio/provas/$id/editar'
+      path: '/laboratorio/provas/$id/editar'
+      fullPath: '/laboratorio/provas/$id/editar'
+      preLoaderRoute: typeof LaboratorioProvasIdEditarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -268,7 +310,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLaboratoriosIndexRoute: AdminLaboratoriosIndexRoute,
   LaboratorioProvasIndexRoute: LaboratorioProvasIndexRoute,
   AdminLaboratoriosIdEditarRoute: AdminLaboratoriosIdEditarRoute,
+  LaboratorioProvasIdEditarRoute: LaboratorioProvasIdEditarRoute,
   AdminLaboratoriosIdIndexRoute: AdminLaboratoriosIdIndexRoute,
+  LaboratorioProvasIdIndexRoute: LaboratorioProvasIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
