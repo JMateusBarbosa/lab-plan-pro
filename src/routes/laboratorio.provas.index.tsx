@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { useCurrentLaboratory, CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
 import { useExams } from "@/lib/exams-store";
+import { getLocalDateString } from "@/lib/date";
 import { buildComputerList } from "@/types/laboratory";
 import { examTypeLabels, type Exam } from "@/types/exam";
 
@@ -54,7 +55,7 @@ function ProvasLista() {
   const [student, setStudent] = useState("");
   const [module, setModule] = useState("");
   const [pc, setPc] = useState(ALL);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(getLocalDateString());
   const [time, setTime] = useState(ALL);
   const [type, setType] = useState(ALL);
   const [status, setStatus] = useState(ALL);
