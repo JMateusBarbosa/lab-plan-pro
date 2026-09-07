@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { mockLaboratories } from "@/data/laboratories";
+import { getLocalDateString } from "@/lib/date";
 import type { Laboratory, LaboratoryFormValues } from "@/types/laboratory";
 
 /**
@@ -38,7 +39,7 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
       status: values.status,
       computerCount: Number(values.computerCount) || 1,
       availableTimes: [...values.availableTimes].sort(),
-      createdAt: new Date().toISOString().slice(0, 10),
+      createdAt: getLocalDateString(),
     };
     setLaboratories((prev) => [lab, ...prev]);
     return lab;
