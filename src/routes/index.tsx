@@ -38,7 +38,7 @@ function Index() {
             <Link to="/admin/login">Entrar como Administrador</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/laboratorio">Entrar como Laboratório</Link>
+            <Link to="/laboratorio/login">Entrar como Laboratório</Link>
           </Button>
         </CardContent>
       </Card>
