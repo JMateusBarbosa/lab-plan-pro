@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { LaboratoryCard } from "@/components/LaboratoryCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useLaboratories } from "@/lib/laboratories-store";
-import type { Laboratory } from "@/types/laboratory";
+import { useLaboratoryAccess } from "@/lib/laboratory-access-store";
 
 export const Route = createFileRoute("/admin/laboratorios/")({
   head: () => ({
@@ -39,30 +37,24 @@ export const Route = createFileRoute("/admin/laboratorios/")({
 });
 
 function LaboratoriosPage() {
-  const { laboratories, toggleStatus, remove } = useLaboratories();
+  const { laboratories, toggleStatus } = useLaboratories();
+  const { getByLaboratoryId } = useLaboratoryAccess();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"todos" | "ativo" | "inativo">("todos");
-  const [toDelete, setToDelete] = useState<Laboratory | null>(null);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return laboratories.filter((lab) => {
       const matchStatus = status === "todos" || lab.status === status;
+      const email = getByLaboratoryId(lab.id)?.email ?? "";
       const matchTerm =
         !term ||
-        [lab.name, lab.schoolName, lab.responsible, lab.email].some((value) =>
+        [lab.name, lab.schoolName, lab.responsible, email].some((value) =>
           value.toLowerCase().includes(term),
         );
       return matchStatus && matchTerm;
     });
-  }, [laboratories, search, status]);
-
-  const handleDelete = () => {
-    if (!toDelete) return;
-    remove(toDelete.id);
-    toast.success("Laboratório excluído.");
-    setToDelete(null);
-  };
+  }, [laboratories, search, status, getByLaboratoryId]);
 
   return (
     <AdminLayout>
@@ -117,44 +109,40 @@ function LaboratoriosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((lab) => (
-                    <TableRow key={lab.id}>
-                      <TableCell className="font-medium">{lab.name}</TableCell>
-                      <TableCell>{lab.schoolName}</TableCell>
-                      <TableCell>{lab.responsible || "—"}</TableCell>
-                      <TableCell>{lab.email}</TableCell>
-                      <TableCell>{lab.city}</TableCell>
-                      <TableCell>{lab.state}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={lab.status} />
-                      </TableCell>
-                      <TableCell>{lab.createdAt}</TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <Button asChild size="sm" variant="outline">
-                            <Link to="/admin/laboratorios/$id" params={{ id: lab.id }}>
-                              Visualizar
-                            </Link>
-                          </Button>
-                          <Button asChild size="sm" variant="outline">
-                            <Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>
-                              Editar
-                            </Link>
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => toggleStatus(lab.id)}>
-                            {lab.status === "ativo" ? "Desativar" : "Ativar"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setToDelete(lab)}
-                          >
-                            Excluir
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filtered.map((lab) => {
+                    const email = getByLaboratoryId(lab.id)?.email ?? "—";
+                    return (
+                      <TableRow key={lab.id}>
+                        <TableCell className="font-medium">{lab.name}</TableCell>
+                        <TableCell>{lab.schoolName}</TableCell>
+                        <TableCell>{lab.responsible || "—"}</TableCell>
+                        <TableCell>{email}</TableCell>
+                        <TableCell>{lab.city}</TableCell>
+                        <TableCell>{lab.state}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={lab.status} />
+                        </TableCell>
+                        <TableCell>{lab.createdAt}</TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
+                            <Button asChild size="sm" variant="outline">
+                              <Link to="/admin/laboratorios/$id" params={{ id: lab.id }}>
+                                Visualizar
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm" variant="outline">
+                              <Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>
+                                Editar
+                              </Link>
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => toggleStatus(lab.id)}>
+                              {lab.status === "ativo" ? "Desativar" : "Ativar"}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -166,21 +154,12 @@ function LaboratoriosPage() {
             <LaboratoryCard
               key={lab.id}
               laboratory={lab}
+              accessEmail={getByLaboratoryId(lab.id)?.email}
               onToggleStatus={toggleStatus}
-              onDelete={setToDelete}
             />
           ))}
         </div>
       </div>
-
-      <ConfirmationDialog
-        open={toDelete !== null}
-        onOpenChange={(open) => !open && setToDelete(null)}
-        title="Tem certeza que deseja excluir este laboratório?"
-        description={toDelete?.name}
-        confirmLabel="Excluir"
-        onConfirm={handleDelete}
-      />
     </AdminLayout>
   );
 }
