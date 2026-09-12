@@ -3,10 +3,6 @@ import { mockLaboratories } from "@/data/laboratories";
 import { getLocalDateString } from "@/lib/date";
 import type { Laboratory, LaboratoryFormValues } from "@/types/laboratory";
 
-/**
- * Store em memória apenas para prototipagem da interface.
- * Futuramente estas funções serão substituídas por chamadas ao backend.
- */
 interface LaboratoriesContextValue {
   laboratories: Laboratory[];
   getById: (id: string) => Laboratory | undefined;
@@ -38,7 +34,6 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
       state: values.state,
       status: values.status,
       computerCount: Number(values.computerCount) || 1,
-      availableTimes: [...values.availableTimes].sort(),
       createdAt: getLocalDateString(),
     };
     setLaboratories((prev) => [lab, ...prev]);
@@ -60,7 +55,6 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
               state: values.state,
               status: values.status,
               computerCount: Number(values.computerCount) || 1,
-              availableTimes: [...values.availableTimes].sort(),
             }
           : lab,
       ),
@@ -93,10 +87,6 @@ export function useLaboratories() {
   return ctx;
 }
 
-/**
- * Laboratório "logado" — mock único até existir autenticação real.
- * Futuramente virá da sessão do usuário autenticado.
- */
 export const CURRENT_LABORATORY_ID = "1";
 
 export function useCurrentLaboratory() {
