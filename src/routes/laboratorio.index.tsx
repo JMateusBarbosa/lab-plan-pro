@@ -22,8 +22,6 @@ export const Route = createFileRoute("/laboratorio/")({
     meta: [
       { title: "Painel do Laboratório — Agendamento de Provas" },
       { name: "description", content: "Resumo das provas agendadas no laboratório." },
-      { property: "og:title", content: "Painel do Laboratório" },
-      { property: "og:description", content: "Resumo das provas agendadas no laboratório." },
     ],
   }),
   component: LaboratorioDashboard,
@@ -34,7 +32,7 @@ function LaboratorioDashboard() {
   const { listByLaboratory } = useExams();
   const exams = listByLaboratory(CURRENT_LABORATORY_ID);
   const today = getLocalDateString();
-  const examsToday = exams.filter((e) => e.examDate === today);
+  const examsToday = exams.filter((exam) => exam.examDate === today);
 
   return (
     <LaboratoryLayout>
@@ -44,28 +42,18 @@ function LaboratorioDashboard() {
             <h1 className="text-xl font-semibold sm:text-2xl">Dashboard</h1>
             <p className="text-sm text-muted-foreground">{lab?.schoolName}</p>
           </div>
-          <Button asChild>
-            <Link to="/laboratorio/provas/nova">Agendar nova prova</Link>
-          </Button>
+          <Button asChild><Link to="/laboratorio/provas/nova">Agendar nova prova</Link></Button>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardCard title="Provas de hoje" value={examsToday.length} />
-          <DashboardCard
-            title="Provas pendentes"
-            value={exams.filter((e) => e.status === "pendente").length}
-          />
-          <DashboardCard
-            title="Provas aprovadas"
-            value={exams.filter((e) => e.status === "aprovado").length}
-          />
-          <DashboardCard title="Total de provas" value={exams.length} />
+          <DashboardCard title="Pendentes" value={exams.filter((exam) => exam.status === "pendente").length} />
+          <DashboardCard title="Aprovadas" value={exams.filter((exam) => exam.status === "aprovado").length} />
+          <DashboardCard title="Reprovadas" value={exams.filter((exam) => exam.status === "reprovado").length} />
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Provas de hoje</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Provas de hoje</CardTitle></CardHeader>
           <CardContent>
             {examsToday.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma prova agendada para hoje.</p>
@@ -76,7 +64,7 @@ function LaboratorioDashboard() {
                     <TableRow>
                       <TableHead>Aluno</TableHead>
                       <TableHead>Módulo</TableHead>
-                      <TableHead>Horário</TableHead>
+                      <TableHead>Horário da aula</TableHead>
                       <TableHead>PC</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Status</TableHead>
@@ -87,12 +75,10 @@ function LaboratorioDashboard() {
                       <TableRow key={exam.id}>
                         <TableCell>{exam.studentName}</TableCell>
                         <TableCell>{exam.module}</TableCell>
-                        <TableCell>{exam.examTime}</TableCell>
+                        <TableCell>{exam.studentClassTime}</TableCell>
                         <TableCell>PC {exam.pcNumber}</TableCell>
                         <TableCell>{examTypeLabels[exam.examType]}</TableCell>
-                        <TableCell>
-                          <ExamStatusBadge status={exam.status} />
-                        </TableCell>
+                        <TableCell><ExamStatusBadge status={exam.status} /></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

@@ -1,8 +1,6 @@
 import type { Laboratory } from "@/types/laboratory";
 
-/**
- * Dados mockados. Futuramente substituídos por consulta ao backend.
- */
+/** Dados mockados até a integração completa com o Supabase. */
 export const mockLaboratories: Laboratory[] = [
   {
     id: "1",
@@ -15,21 +13,6 @@ export const mockLaboratories: Laboratory[] = [
     state: "AM",
     status: "ativo",
     computerCount: 14,
-    availableTimes: [
-      "07:30",
-      "08:00",
-      "08:30",
-      "09:00",
-      "10:00",
-      "11:00",
-      "11:30",
-      "14:00",
-      "15:00",
-      "16:00",
-      "17:00",
-      "18:00",
-      "19:00",
-    ],
     createdAt: "2025-02-10",
   },
   {
@@ -43,7 +26,6 @@ export const mockLaboratories: Laboratory[] = [
     state: "AM",
     status: "ativo",
     computerCount: 8,
-    availableTimes: ["08:00", "09:00", "10:00", "14:00", "15:00"],
     createdAt: "2025-04-22",
   },
   {
@@ -57,49 +39,13 @@ export const mockLaboratories: Laboratory[] = [
     state: "AM",
     status: "inativo",
     computerCount: 20,
-    availableTimes: ["07:30", "09:30", "13:30", "16:30", "19:00"],
     createdAt: "2025-06-05",
-  },
-  {
-    id: "4",
-    name: "Laboratório de Informática 04",
-    schoolName: "Unidade Leste",
-    responsible: "João Pereira",
-    email: "lab.leste@exemplo.com",
-    phone: "(92) 99999-0004",
-    city: "Itacoatiara",
-    state: "AM",
-    status: "ativo",
-    computerCount: 12,
-    availableTimes: ["08:00", "10:00", "14:00", "18:00"],
-    createdAt: "2025-07-14",
-  },
-  {
-    id: "5",
-    name: "Laboratório de Informática 05",
-    schoolName: "Unidade Sul",
-    responsible: "Beatriz Lima",
-    email: "lab.sul@exemplo.com",
-    phone: "(92) 99999-0005",
-    city: "Parintins",
-    state: "AM",
-    status: "ativo",
-    computerCount: 10,
-    availableTimes: ["07:30", "08:30", "11:30", "15:00", "17:00"],
-    createdAt: "2025-08-01",
   },
 ];
 
 export const mockDashboardStats = {
-  total: 5,
-  ativos: 4,
+  total: 3,
+  ativos: 2,
   inativos: 1,
-  provasAgendadas: 126,
-};
-
-export const mockLaboratorySummary = {
-  agendadas: 32,
-  realizadas: 25,
-  pendentes: 7,
-  hoje: 3,
+  provasAgendadas: 15,
 };

@@ -3,10 +3,6 @@ import { mockExams } from "@/data/exams";
 import { getLocalDateString } from "@/lib/date";
 import type { Exam, ExamFormValues } from "@/types/exam";
 
-/**
- * Store em memória apenas para prototipagem.
- * Futuramente será substituída por chamadas ao backend (filtro por laboratoryId).
- */
 interface ExamsContextValue {
   exams: Exam[];
   listByLaboratory: (laboratoryId: string) => Exam[];
@@ -29,17 +25,20 @@ export function ExamsProvider({ children }: { children: ReactNode }) {
   const getById = useCallback((id: string) => exams.find((exam) => exam.id === id), [exams]);
 
   const create = useCallback((laboratoryId: string, values: ExamFormValues) => {
+    const now = getLocalDateString();
     const exam: Exam = {
       id: String(Date.now()),
       laboratoryId,
       studentName: values.studentName,
       module: values.module,
-      pcNumber: Number(values.pcNumber),
+      studentClassTime: values.studentClassTime,
       examDate: values.examDate,
-      examTime: values.examTime,
+      pcNumber: Number(values.pcNumber),
       examType: values.examType,
       status: values.status,
-      createdAt: getLocalDateString(),
+      previousExamId: values.previousExamId ?? null,
+      createdAt: now,
+      updatedAt: now,
     };
     setExams((prev) => [exam, ...prev]);
     return exam;
@@ -53,11 +52,13 @@ export function ExamsProvider({ children }: { children: ReactNode }) {
               ...exam,
               studentName: values.studentName,
               module: values.module,
-              pcNumber: Number(values.pcNumber),
+              studentClassTime: values.studentClassTime,
               examDate: values.examDate,
-              examTime: values.examTime,
+              pcNumber: Number(values.pcNumber),
               examType: values.examType,
               status: values.status,
+              previousExamId: values.previousExamId ?? null,
+              updatedAt: getLocalDateString(),
             }
           : exam,
       ),

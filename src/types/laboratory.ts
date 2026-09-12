@@ -10,19 +10,16 @@ export interface Laboratory {
   city: string;
   state: string;
   status: LaboratoryStatus;
-  /** Quantidade de computadores do laboratório (gera PC 1..N). */
   computerCount: number;
-  /** Horários disponíveis, no formato "HH:MM". */
-  availableTimes: string[];
-  createdAt: string; // ISO date
+  createdAt: string;
+  updatedAt?: string;
 }
 
-export type LaboratoryFormValues = Omit<Laboratory, "id" | "createdAt"> & {
+export type LaboratoryFormValues = Omit<Laboratory, "id" | "createdAt" | "updatedAt"> & {
   password?: string;
   confirmPassword?: string;
 };
 
-/** Gera a lista de computadores a partir da quantidade configurada. */
 export function buildComputerList(computerCount: number): number[] {
   return Array.from({ length: Math.max(0, computerCount) }, (_, i) => i + 1);
 }

@@ -1,28 +1,33 @@
-export type ExamType = "P1" | "REC1" | "REC2";
-export type ExamStatus = "pendente" | "aprovado";
+export type ExamType = "p1" | "recuperacao";
+export type ExamStatus = "pendente" | "aprovado" | "reprovado";
 
 export interface Exam {
   id: string;
   laboratoryId: string;
   studentName: string;
   module: string;
-  pcNumber: number;
+  studentClassTime: string; // HH:MM
   examDate: string; // YYYY-MM-DD
-  examTime: string; // HH:MM
+  pcNumber: number;
   examType: ExamType;
   status: ExamStatus;
-  createdAt: string; // YYYY-MM-DD
+  previousExamId: string | null;
+  createdAt: string;
+  updatedAt?: string;
 }
 
-export type ExamFormValues = Omit<Exam, "id" | "laboratoryId" | "createdAt">;
+export type ExamFormValues = Omit<
+  Exam,
+  "id" | "laboratoryId" | "createdAt" | "updatedAt"
+>;
 
 export const examTypeLabels: Record<ExamType, string> = {
-  P1: "P1",
-  REC1: "Recuperação 1",
-  REC2: "Recuperação 2",
+  p1: "P1",
+  recuperacao: "Recuperação",
 };
 
 export const examStatusLabels: Record<ExamStatus, string> = {
   pendente: "Pendente",
   aprovado: "Aprovado",
+  reprovado: "Reprovado",
 };
