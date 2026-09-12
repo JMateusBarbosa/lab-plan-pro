@@ -3,14 +3,13 @@ import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { LaboratoryForm } from "@/components/LaboratoryForm";
 import { useLaboratories } from "@/lib/laboratories-store";
+import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
 
 export const Route = createFileRoute("/admin/laboratorios/novo")({
   head: () => ({
     meta: [
       { title: "Novo laboratório — Agendamento de Provas" },
       { name: "description", content: "Cadastro de um novo laboratório no sistema." },
-      { property: "og:title", content: "Novo laboratório" },
-      { property: "og:description", content: "Cadastro de um novo laboratório no sistema." },
     ],
   }),
   component: NovoLaboratorio,
@@ -19,6 +18,7 @@ export const Route = createFileRoute("/admin/laboratorios/novo")({
 function NovoLaboratorio() {
   const navigate = useNavigate();
   const { create } = useLaboratories();
+  const { replaceForLaboratory } = useLaboratorySchedules();
 
   return (
     <AdminLayout>
@@ -27,8 +27,9 @@ function NovoLaboratorio() {
         <LaboratoryForm
           mode="create"
           onCancel={() => navigate({ to: "/admin/laboratorios" })}
-          onSubmit={(values) => {
-            create(values);
+          onSubmit={(values, schedules) => {
+            const laboratory = create(values);
+            replaceForLaboratory(laboratory.id, schedules);
             toast.success("Laboratório cadastrado com sucesso.");
             navigate({ to: "/admin/laboratorios" });
           }}
