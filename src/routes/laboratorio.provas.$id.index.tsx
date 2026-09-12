@@ -15,8 +15,6 @@ export const Route = createFileRoute("/laboratorio/provas/$id/")({
     meta: [
       { title: "Detalhes da prova — Agendamento de Provas" },
       { name: "description", content: "Informações completas da prova agendada." },
-      { property: "og:title", content: "Detalhes da prova" },
-      { property: "og:description", content: "Informações completas da prova agendada." },
     ],
   }),
   component: DetalhesProva,
@@ -43,13 +41,13 @@ function DetalhesProva() {
       <LaboratoryLayout>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">Prova não encontrada.</p>
-          <Button asChild variant="outline">
-            <Link to="/laboratorio/provas">Voltar</Link>
-          </Button>
+          <Button asChild variant="outline"><Link to="/laboratorio/provas">Voltar</Link></Button>
         </div>
       </LaboratoryLayout>
     );
   }
+
+  const previousExam = exam.previousExamId ? getById(exam.previousExamId) : undefined;
 
   return (
     <LaboratoryLayout>
@@ -60,30 +58,20 @@ function DetalhesProva() {
             <p className="text-sm text-muted-foreground">{exam.module}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>
-                Editar
-              </Link>
-            </Button>
-            <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
-              Excluir
-            </Button>
-            <Button variant="ghost" onClick={() => navigate({ to: "/laboratorio/provas" })}>
-              Voltar
-            </Button>
+            <Button asChild><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar</Link></Button>
+            <Button variant="destructive" onClick={() => setConfirmOpen(true)}>Excluir</Button>
+            <Button variant="ghost" onClick={() => navigate({ to: "/laboratorio/provas" })}>Voltar</Button>
           </div>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Informações da prova</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Informações da prova</CardTitle></CardHeader>
           <CardContent>
             <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Info label="Nome do aluno" value={exam.studentName} />
               <Info label="Módulo" value={exam.module} />
               <Info label="Data" value={exam.examDate} />
-              <Info label="Horário" value={exam.examTime} />
+              <Info label="Horário da aula" value={exam.studentClassTime} />
               <Info label="Computador" value={`PC ${exam.pcNumber}`} />
               <Info label="Tipo" value={examTypeLabels[exam.examType]} />
               <Info label="Status" value={<ExamStatusBadge status={exam.status} />} />
@@ -91,6 +79,25 @@ function DetalhesProva() {
             </dl>
           </CardContent>
         </Card>
+
+        {exam.examType === "recuperacao" ? (
+          <Card>
+            <CardHeader><CardTitle className="text-base">Origem da recuperação</CardTitle></CardHeader>
+            <CardContent>
+              {previousExam ? (
+                <div className="space-y-2 text-sm">
+                  <p>{previousExam.studentName} — {previousExam.module}</p>
+                  <p className="text-muted-foreground">Prova anterior em {previousExam.examDate}, status: {previousExam.status}.</p>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/laboratorio/provas/$id" params={{ id: previousExam.id }}>Ver prova anterior</Link>
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">A prova anterior não foi encontrada.</p>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       <ConfirmationDialog
