@@ -28,7 +28,7 @@ function NovaProva() {
 
   const exams = listByLaboratory(CURRENT_LABORATORY_ID);
   const schedules = listSchedules(CURRENT_LABORATORY_ID);
-  const previousExamOptions = exams.filter((exam) => exam.examType === "p1" && exam.status === "reprovado");
+  const previousExamOptions = exams.filter((exam) => exam.status === "reprovado");
 
   return (
     <LaboratoryLayout>
