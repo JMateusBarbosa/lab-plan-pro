@@ -39,7 +39,7 @@ function EditarProva() {
   const exams = listByLaboratory(CURRENT_LABORATORY_ID);
   const schedules = listSchedules(CURRENT_LABORATORY_ID);
   const previousExamOptions = exams.filter(
-    (candidate) => candidate.id !== id && candidate.examType === "p1" && candidate.status === "reprovado",
+    (candidate) => candidate.id !== id && candidate.status === "reprovado",
   );
 
   return (
