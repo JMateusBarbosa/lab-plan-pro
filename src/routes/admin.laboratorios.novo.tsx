@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { LaboratoryForm } from "@/components/LaboratoryForm";
 import { useLaboratories } from "@/lib/laboratories-store";
+import { useLaboratoryAccess } from "@/lib/laboratory-access-store";
 import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
 
 export const Route = createFileRoute("/admin/laboratorios/novo")({
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/admin/laboratorios/novo")({
 function NovoLaboratorio() {
   const navigate = useNavigate();
   const { create } = useLaboratories();
+  const { upsert: upsertAccess } = useLaboratoryAccess();
   const { replaceForLaboratory } = useLaboratorySchedules();
 
   return (
@@ -27,8 +29,9 @@ function NovoLaboratorio() {
         <LaboratoryForm
           mode="create"
           onCancel={() => navigate({ to: "/admin/laboratorios" })}
-          onSubmit={(values, schedules) => {
+          onSubmit={(values, access, schedules) => {
             const laboratory = create(values);
+            upsertAccess(laboratory.id, access.email.trim());
             replaceForLaboratory(laboratory.id, schedules);
             toast.success("Laboratório cadastrado com sucesso.");
             navigate({ to: "/admin/laboratorios" });
