@@ -24,8 +24,8 @@ export function ExamCard({ exam, onDelete }: ExamCardProps) {
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
           <dt className="text-muted-foreground">Data</dt>
           <dd>{exam.examDate}</dd>
-          <dt className="text-muted-foreground">Horário</dt>
-          <dd>{exam.examTime}</dd>
+          <dt className="text-muted-foreground">Horário da aula</dt>
+          <dd>{exam.studentClassTime}</dd>
           <dt className="text-muted-foreground">Computador</dt>
           <dd>PC {exam.pcNumber}</dd>
           <dt className="text-muted-foreground">Tipo</dt>
@@ -34,18 +34,12 @@ export function ExamCard({ exam, onDelete }: ExamCardProps) {
 
         <div className="flex flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">
-            <Link to="/laboratorio/provas/$id" params={{ id: exam.id }}>
-              Ver
-            </Link>
+            <Link to="/laboratorio/provas/$id" params={{ id: exam.id }}>Ver</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>
-              Editar
-            </Link>
+            <Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar</Link>
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => onDelete(exam)}>
-            Excluir
-          </Button>
+          <Button size="sm" variant="destructive" onClick={() => onDelete(exam)}>Excluir</Button>
         </div>
       </CardContent>
     </Card>
