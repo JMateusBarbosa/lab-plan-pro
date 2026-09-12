@@ -4,6 +4,7 @@ import { AdminLayout } from "@/layouts/AdminLayout";
 import { LaboratoryForm } from "@/components/LaboratoryForm";
 import { Button } from "@/components/ui/button";
 import { useLaboratories } from "@/lib/laboratories-store";
+import { useLaboratoryAccess } from "@/lib/laboratory-access-store";
 import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
 
 export const Route = createFileRoute("/admin/laboratorios/$id/editar")({
@@ -20,6 +21,7 @@ function EditarLaboratorio() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { getById, update } = useLaboratories();
+  const { getByLaboratoryId, upsert: upsertAccess } = useLaboratoryAccess();
   const { listByLaboratory, replaceForLaboratory } = useLaboratorySchedules();
   const lab = getById(id);
 
@@ -34,6 +36,7 @@ function EditarLaboratorio() {
     );
   }
 
+  const account = getByLaboratoryId(id);
   const schedules = listByLaboratory(id).map(({ dayOfWeek, startTime, endTime, active }) => ({
     dayOfWeek,
     startTime,
@@ -48,11 +51,13 @@ function EditarLaboratorio() {
         <LaboratoryForm
           mode="edit"
           initialValues={lab}
+          initialAccess={{ email: account?.email ?? "" }}
           initialSchedules={schedules}
           onResetPassword={() => toast.info("Redefinição de senha será integrada ao Supabase posteriormente.")}
           onCancel={() => navigate({ to: "/admin/laboratorios/$id", params: { id } })}
-          onSubmit={(values, nextSchedules) => {
+          onSubmit={(values, access, nextSchedules) => {
             update(id, values);
+            upsertAccess(id, access.email.trim());
             replaceForLaboratory(id, nextSchedules);
             toast.success("Alterações salvas com sucesso.");
             navigate({ to: "/admin/laboratorios/$id", params: { id } });
