@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLaboratories } from "@/lib/laboratories-store";
+import { useLaboratoryAccess } from "@/lib/laboratory-access-store";
 import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
 import { useExams } from "@/lib/exams-store";
 import { getLocalDateString } from "@/lib/date";
@@ -34,6 +35,7 @@ function DetalhesLaboratorio() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { getById, toggleStatus } = useLaboratories();
+  const { getByLaboratoryId } = useLaboratoryAccess();
   const { listByLaboratory: listSchedules } = useLaboratorySchedules();
   const { listByLaboratory: listExams } = useExams();
   const lab = getById(id);
@@ -49,6 +51,7 @@ function DetalhesLaboratorio() {
     );
   }
 
+  const access = getByLaboratoryId(id);
   const schedules = listSchedules(id);
   const exams = listExams(id);
   const today = getLocalDateString();
@@ -81,8 +84,14 @@ function DetalhesLaboratorio() {
               <Info label="Status" value={<StatusBadge status={lab.status} />} />
               <Info label="Computadores" value={`${lab.computerCount} PCs`} />
               <Info label="Data de cadastro" value={lab.createdAt} />
-              <Info label="E-mail/login" value={lab.email} />
             </dl>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Conta de acesso</CardTitle></CardHeader>
+          <CardContent>
+            <Info label="E-mail/login" value={access?.email} />
           </CardContent>
         </Card>
 

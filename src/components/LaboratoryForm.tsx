@@ -13,7 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { LaboratoryFormValues, LaboratoryStatus } from "@/types/laboratory";
+import type {
+  LaboratoryAccessFormValues,
+  LaboratoryFormValues,
+  LaboratoryStatus,
+} from "@/types/laboratory";
 import {
   dayOfWeekLabels,
   type LaboratoryScheduleInput,
@@ -22,8 +26,13 @@ import {
 interface LaboratoryFormProps {
   mode: "create" | "edit";
   initialValues?: Partial<LaboratoryFormValues>;
+  initialAccess?: Partial<LaboratoryAccessFormValues>;
   initialSchedules?: LaboratoryScheduleInput[];
-  onSubmit: (values: LaboratoryFormValues, schedules: LaboratoryScheduleInput[]) => void;
+  onSubmit: (
+    values: LaboratoryFormValues,
+    access: LaboratoryAccessFormValues,
+    schedules: LaboratoryScheduleInput[],
+  ) => void;
   onCancel: () => void;
   onResetPassword?: () => void;
 }
@@ -32,12 +41,15 @@ const emptyValues: LaboratoryFormValues = {
   name: "",
   schoolName: "",
   responsible: "",
-  email: "",
   phone: "",
   city: "",
   state: "",
   status: "ativo",
   computerCount: 1,
+};
+
+const emptyAccess: LaboratoryAccessFormValues = {
+  email: "",
   password: "",
   confirmPassword: "",
 };
@@ -45,12 +57,14 @@ const emptyValues: LaboratoryFormValues = {
 export function LaboratoryForm({
   mode,
   initialValues,
+  initialAccess,
   initialSchedules = [],
   onSubmit,
   onCancel,
   onResetPassword,
 }: LaboratoryFormProps) {
   const [values, setValues] = useState<LaboratoryFormValues>({ ...emptyValues, ...initialValues });
+  const [access, setAccess] = useState<LaboratoryAccessFormValues>({ ...emptyAccess, ...initialAccess });
   const [schedules, setSchedules] = useState<LaboratoryScheduleInput[]>(initialSchedules);
   const [dayOfWeek, setDayOfWeek] = useState("1");
   const [startTime, setStartTime] = useState("");
@@ -59,6 +73,9 @@ export function LaboratoryForm({
 
   const set = (key: keyof LaboratoryFormValues, value: string) =>
     setValues((prev) => ({ ...prev, [key]: value }));
+
+  const setAccessField = (key: keyof LaboratoryAccessFormValues, value: string) =>
+    setAccess((prev) => ({ ...prev, [key]: value }));
 
   const addSchedule = () => {
     const day = Number(dayOfWeek);
@@ -93,7 +110,7 @@ export function LaboratoryForm({
     const nextErrors: Record<string, string> = {};
     if (!values.name.trim()) nextErrors.name = "Informe o nome do laboratório.";
     if (!values.schoolName.trim()) nextErrors.schoolName = "Informe a unidade/escola.";
-    if (!values.email.trim()) nextErrors.email = "Informe o e-mail de acesso.";
+    if (!access.email.trim()) nextErrors.email = "Informe o e-mail de acesso.";
     if (!values.city.trim()) nextErrors.city = "Informe a cidade.";
     if (!values.state.trim()) nextErrors.state = "Informe o estado.";
     if (!values.computerCount || values.computerCount < 1) {
@@ -101,16 +118,16 @@ export function LaboratoryForm({
     }
     if (schedules.length === 0) nextErrors.schedules = "Cadastre pelo menos um horário.";
     if (mode === "create") {
-      if (!values.password) nextErrors.password = "Informe a senha provisória.";
-      if (!values.confirmPassword) nextErrors.confirmPassword = "Confirme a senha.";
-      if (values.password && values.confirmPassword && values.password !== values.confirmPassword) {
+      if (!access.password) nextErrors.password = "Informe a senha provisória.";
+      if (!access.confirmPassword) nextErrors.confirmPassword = "Confirme a senha.";
+      if (access.password && access.confirmPassword && access.password !== access.confirmPassword) {
         nextErrors.confirmPassword = "As senhas não conferem.";
       }
     }
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
-    onSubmit(values, schedules);
+    onSubmit(values, access, schedules);
   };
 
   const field = (
@@ -128,6 +145,25 @@ export function LaboratoryForm({
         placeholder={options?.placeholder}
         value={(values[id] as string) ?? ""}
         onChange={(e) => set(id, e.target.value)}
+      />
+      {errors[id] ? <p className="text-xs text-destructive">{errors[id]}</p> : null}
+    </div>
+  );
+
+  const accessField = (
+    id: keyof LaboratoryAccessFormValues,
+    label: string,
+    options?: { required?: boolean; type?: string },
+  ) => (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>
+        {label}{options?.required ? " *" : ""}
+      </Label>
+      <Input
+        id={id}
+        type={options?.type ?? "text"}
+        value={access[id] ?? ""}
+        onChange={(e) => setAccessField(id, e.target.value)}
       />
       {errors[id] ? <p className="text-xs text-destructive">{errors[id]}</p> : null}
     </div>
@@ -213,13 +249,15 @@ export function LaboratoryForm({
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Dados de acesso</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Conta de acesso</CardTitle>
+        </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          {field("email", "E-mail/login", { required: true, type: "email" })}
+          {accessField("email", "E-mail/login", { required: true, type: "email" })}
           {mode === "create" ? (
             <>
-              {field("password", "Senha provisória", { required: true, type: "password" })}
-              {field("confirmPassword", "Confirmar senha", { required: true, type: "password" })}
+              {accessField("password", "Senha provisória", { required: true, type: "password" })}
+              {accessField("confirmPassword", "Confirmar senha", { required: true, type: "password" })}
             </>
           ) : (
             <div className="flex items-end">

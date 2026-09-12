@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useExams } from "@/lib/exams-store";
 import { useCurrentLaboratory, CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
 import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
+import { wouldCreateExamLineageCycle } from "@/lib/exam-lineage";
 
 export const Route = createFileRoute("/laboratorio/provas/$id/editar")({
   head: () => ({
@@ -39,7 +40,10 @@ function EditarProva() {
   const exams = listByLaboratory(CURRENT_LABORATORY_ID);
   const schedules = listSchedules(CURRENT_LABORATORY_ID);
   const previousExamOptions = exams.filter(
-    (candidate) => candidate.id !== id && candidate.examType === "p1" && candidate.status === "reprovado",
+    (candidate) =>
+      candidate.id !== id &&
+      candidate.status === "reprovado" &&
+      !wouldCreateExamLineageCycle(exams, id, candidate.id),
   );
 
   return (
@@ -64,6 +68,11 @@ function EditarProva() {
 
             if (hasConflict) {
               toast.error("Este computador já está agendado para a mesma data e horário de aula.");
+              return;
+            }
+
+            if (values.examType === "recuperacao" && wouldCreateExamLineageCycle(exams, id, values.previousExamId)) {
+              toast.error("A prova anterior selecionada criaria um ciclo no histórico de recuperações.");
               return;
             }
 

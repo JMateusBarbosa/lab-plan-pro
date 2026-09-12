@@ -9,7 +9,6 @@ interface LaboratoriesContextValue {
   create: (values: LaboratoryFormValues) => Laboratory;
   update: (id: string, values: LaboratoryFormValues) => void;
   toggleStatus: (id: string) => void;
-  remove: (id: string) => void;
 }
 
 const LaboratoriesContext = createContext<LaboratoriesContextValue | null>(null);
@@ -28,7 +27,6 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
       name: values.name,
       schoolName: values.schoolName,
       responsible: values.responsible,
-      email: values.email,
       phone: values.phone,
       city: values.city,
       state: values.state,
@@ -49,7 +47,6 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
               name: values.name,
               schoolName: values.schoolName,
               responsible: values.responsible,
-              email: values.email,
               phone: values.phone,
               city: values.city,
               state: values.state,
@@ -69,13 +66,9 @@ export function LaboratoriesProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const remove = useCallback((id: string) => {
-    setLaboratories((prev) => prev.filter((lab) => lab.id !== id));
-  }, []);
-
   const value = useMemo(
-    () => ({ laboratories, getById, create, update, toggleStatus, remove }),
-    [laboratories, getById, create, update, toggleStatus, remove],
+    () => ({ laboratories, getById, create, update, toggleStatus }),
+    [laboratories, getById, create, update, toggleStatus],
   );
 
   return <LaboratoriesContext.Provider value={value}>{children}</LaboratoriesContext.Provider>;

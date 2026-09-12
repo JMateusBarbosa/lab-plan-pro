@@ -6,11 +6,11 @@ import type { Laboratory } from "@/types/laboratory";
 
 interface LaboratoryCardProps {
   laboratory: Laboratory;
+  accessEmail?: string;
   onToggleStatus: (id: string) => void;
-  onDelete: (laboratory: Laboratory) => void;
 }
 
-export function LaboratoryCard({ laboratory, onToggleStatus, onDelete }: LaboratoryCardProps) {
+export function LaboratoryCard({ laboratory, accessEmail, onToggleStatus }: LaboratoryCardProps) {
   return (
     <Card>
       <CardContent className="space-y-3 p-4">
@@ -26,7 +26,7 @@ export function LaboratoryCard({ laboratory, onToggleStatus, onDelete }: Laborat
           <dt className="text-muted-foreground">Responsável</dt>
           <dd className="truncate">{laboratory.responsible || "—"}</dd>
           <dt className="text-muted-foreground">E-mail</dt>
-          <dd className="truncate">{laboratory.email}</dd>
+          <dd className="truncate">{accessEmail || "—"}</dd>
           <dt className="text-muted-foreground">Cidade/UF</dt>
           <dd className="truncate">
             {laboratory.city} / {laboratory.state}
@@ -48,9 +48,6 @@ export function LaboratoryCard({ laboratory, onToggleStatus, onDelete }: Laborat
           </Button>
           <Button size="sm" variant="outline" onClick={() => onToggleStatus(laboratory.id)}>
             {laboratory.status === "ativo" ? "Desativar" : "Ativar"}
-          </Button>
-          <Button size="sm" variant="destructive" onClick={() => onDelete(laboratory)}>
-            Excluir
           </Button>
         </div>
       </CardContent>
