@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
 import { ExamForm } from "@/components/ExamForm";
 import { useCurrentLaboratory, CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
+import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
 import { useExams } from "@/lib/exams-store";
 
 export const Route = createFileRoute("/laboratorio/provas/nova")({
@@ -10,8 +11,6 @@ export const Route = createFileRoute("/laboratorio/provas/nova")({
     meta: [
       { title: "Agendar prova — Agendamento de Provas" },
       { name: "description", content: "Agende uma nova prova no laboratório." },
-      { property: "og:title", content: "Agendar prova" },
-      { property: "og:description", content: "Agende uma nova prova no laboratório." },
     ],
   }),
   component: NovaProva,
@@ -20,15 +19,16 @@ export const Route = createFileRoute("/laboratorio/provas/nova")({
 function NovaProva() {
   const navigate = useNavigate();
   const lab = useCurrentLaboratory();
+  const { listByLaboratory: listSchedules } = useLaboratorySchedules();
   const { create, listByLaboratory } = useExams();
 
   if (!lab) {
-    return (
-      <LaboratoryLayout>
-        <p className="text-sm text-muted-foreground">Laboratório não encontrado.</p>
-      </LaboratoryLayout>
-    );
+    return <LaboratoryLayout><p className="text-sm text-muted-foreground">Laboratório não encontrado.</p></LaboratoryLayout>;
   }
+
+  const exams = listByLaboratory(CURRENT_LABORATORY_ID);
+  const schedules = listSchedules(CURRENT_LABORATORY_ID);
+  const previousExamOptions = exams.filter((exam) => exam.examType === "p1" && exam.status === "reprovado");
 
   return (
     <LaboratoryLayout>
@@ -37,17 +37,19 @@ function NovaProva() {
         <ExamForm
           mode="create"
           laboratory={lab}
+          schedules={schedules}
+          previousExamOptions={previousExamOptions}
           onCancel={() => navigate({ to: "/laboratorio/provas" })}
           onSubmit={(values) => {
-            const hasConflict = listByLaboratory(CURRENT_LABORATORY_ID).some(
+            const hasConflict = exams.some(
               (exam) =>
                 exam.examDate === values.examDate &&
-                exam.examTime === values.examTime &&
+                exam.studentClassTime === values.studentClassTime &&
                 exam.pcNumber === values.pcNumber,
             );
 
             if (hasConflict) {
-              toast.error("Este computador já está agendado para a mesma data e horário.");
+              toast.error("Este computador já está agendado para a mesma data e horário de aula.");
               return;
             }
 
