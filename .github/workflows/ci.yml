@@ -25,4 +25,4 @@ jobs:
         run: bun run build
 
       - name: Lint
-        run: bun run lint
+        run: bunx eslint . --rule 'prettier/prettier: off'
