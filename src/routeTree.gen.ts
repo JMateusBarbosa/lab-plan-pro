@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminCadastroRouteImport } from './routes/admin.cadastro'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminCadastroRouteImport } from './routes/admin.cadastro'
 import { Route as LaboratorioIndexRouteImport } from './routes/laboratorio.index'
@@ -32,6 +33,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCadastroRoute = AdminCadastroRouteImport.update({
+  id: '/admin/cadastro',
+  path: '/admin/cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
@@ -101,6 +107,7 @@ const LaboratorioProvasIdEditarRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin/cadastro': typeof AdminCadastroRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/cadastro': typeof AdminCadastroRoute
   '/laboratorio/login': typeof LaboratorioLoginRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/cadastro': typeof AdminCadastroRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/cadastro': typeof AdminCadastroRoute
   '/laboratorio/login': typeof LaboratorioLoginRoute
@@ -134,6 +142,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin/cadastro': typeof AdminCadastroRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/cadastro': typeof AdminCadastroRoute
   '/laboratorio/login': typeof LaboratorioLoginRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin/cadastro'
     | '/admin/login'
     | '/admin/cadastro'
     | '/laboratorio/login'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin/cadastro'
     | '/admin/login'
     | '/admin/cadastro'
     | '/laboratorio/login'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin/cadastro'
     | '/admin/login'
     | '/admin/cadastro'
     | '/laboratorio/login'
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminCadastroRoute: typeof AdminCadastroRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminCadastroRoute: typeof AdminCadastroRoute
   LaboratorioLoginRoute: typeof LaboratorioLoginRoute
@@ -230,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/cadastro': {
+      id: '/admin/cadastro'
+      path: '/admin/cadastro'
+      fullPath: '/admin/cadastro'
+      preLoaderRoute: typeof AdminCadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/login': {
@@ -321,6 +341,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminCadastroRoute: AdminCadastroRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminCadastroRoute: AdminCadastroRoute,
   LaboratorioLoginRoute: LaboratorioLoginRoute,
