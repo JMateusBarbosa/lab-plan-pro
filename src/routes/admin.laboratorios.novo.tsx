@@ -2,9 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { LaboratoryForm } from "@/components/LaboratoryForm";
-import { useLaboratories } from "@/lib/laboratories-store";
-import { useLaboratoryAccess } from "@/lib/laboratory-access-store";
-import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
+import { useProvisionLaboratoryMutation } from "@/lib/admin-laboratories-queries";
 
 export const Route = createFileRoute("/admin/laboratorios/novo")({
   head: () => ({
@@ -18,9 +16,7 @@ export const Route = createFileRoute("/admin/laboratorios/novo")({
 
 function NovoLaboratorio() {
   const navigate = useNavigate();
-  const { create } = useLaboratories();
-  const { upsert: upsertAccess } = useLaboratoryAccess();
-  const { replaceForLaboratory } = useLaboratorySchedules();
+  const provision = useProvisionLaboratoryMutation();
 
   return (
     <AdminLayout>
@@ -29,12 +25,17 @@ function NovoLaboratorio() {
         <LaboratoryForm
           mode="create"
           onCancel={() => navigate({ to: "/admin/laboratorios" })}
-          onSubmit={(values, access, schedules) => {
-            const laboratory = create(values);
-            upsertAccess(laboratory.id, access.email.trim());
-            replaceForLaboratory(laboratory.id, schedules);
-            toast.success("Laboratório cadastrado com sucesso.");
-            navigate({ to: "/admin/laboratorios" });
+          onSubmit={async (values, access, schedules) => {
+            if (provision.isPending) return;
+
+            try {
+              await provision.mutateAsync({ values, access, schedules });
+              toast.success("Laboratório cadastrado com sucesso.");
+              navigate({ to: "/admin/laboratorios" });
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Não foi possível cadastrar o laboratório.";
+              toast.error(message);
+            }
           }}
         />
       </div>
