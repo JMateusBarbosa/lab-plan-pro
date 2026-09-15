@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { LaboratoryCard } from "@/components/LaboratoryCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -21,8 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useLaboratories } from "@/lib/laboratories-store";
-import { useLaboratoryAccess } from "@/lib/laboratory-access-store";
+import {
+  useAdminLaboratoriesQuery,
+  useToggleLaboratoryStatusMutation,
+} from "@/lib/admin-laboratories-queries";
+import type { Laboratory } from "@/types/laboratory";
 
 export const Route = createFileRoute("/admin/laboratorios/")({
   head: () => ({
@@ -36,25 +40,40 @@ export const Route = createFileRoute("/admin/laboratorios/")({
   component: LaboratoriosPage,
 });
 
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("pt-BR");
+}
+
 function LaboratoriosPage() {
-  const { laboratories, toggleStatus } = useLaboratories();
-  const { getByLaboratoryId } = useLaboratoryAccess();
+  const { data: records = [], isLoading, isError, refetch } = useAdminLaboratoriesQuery();
+  const toggleStatus = useToggleLaboratoryStatusMutation();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"todos" | "ativo" | "inativo">("todos");
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return laboratories.filter((lab) => {
-      const matchStatus = status === "todos" || lab.status === status;
-      const email = getByLaboratoryId(lab.id)?.email ?? "";
+    return records.filter(({ laboratory, accessEmail }) => {
+      const matchStatus = status === "todos" || laboratory.status === status;
       const matchTerm =
         !term ||
-        [lab.name, lab.schoolName, lab.responsible, email].some((value) =>
+        [laboratory.name, laboratory.schoolName, laboratory.responsible, accessEmail].some((value) =>
           value.toLowerCase().includes(term),
         );
       return matchStatus && matchTerm;
     });
-  }, [laboratories, search, status, getByLaboratoryId]);
+  }, [records, search, status]);
+
+  const handleToggleStatus = async (laboratory: Laboratory) => {
+    if (toggleStatus.isPending) return;
+
+    try {
+      await toggleStatus.mutateAsync({ id: laboratory.id, currentStatus: laboratory.status });
+      toast.success(laboratory.status === "ativo" ? "Laboratório desativado." : "Laboratório ativado.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível alterar o status.";
+      toast.error(message);
+    }
+  };
 
   return (
     <AdminLayout>
@@ -87,78 +106,87 @@ function LaboratoriosPage() {
           </CardContent>
         </Card>
 
-        {filtered.length === 0 ? (
+        {isLoading ? <p className="text-sm text-muted-foreground">Carregando laboratórios...</p> : null}
+        {isError ? (
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-destructive">Não foi possível carregar os laboratórios.</p>
+            <Button size="sm" variant="outline" onClick={() => void refetch()}>
+              Tentar novamente
+            </Button>
+          </div>
+        ) : null}
+        {!isLoading && !isError && filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum laboratório encontrado.</p>
         ) : null}
 
-        <div className="hidden lg:block">
-          <Card>
-            <CardContent className="overflow-x-auto p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Unidade/Escola</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Cidade</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Cadastro</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((lab) => {
-                    const email = getByLaboratoryId(lab.id)?.email ?? "—";
-                    return (
-                      <TableRow key={lab.id}>
-                        <TableCell className="font-medium">{lab.name}</TableCell>
-                        <TableCell>{lab.schoolName}</TableCell>
-                        <TableCell>{lab.responsible || "—"}</TableCell>
-                        <TableCell>{email}</TableCell>
-                        <TableCell>{lab.city}</TableCell>
-                        <TableCell>{lab.state}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={lab.status} />
-                        </TableCell>
-                        <TableCell>{lab.createdAt}</TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-2">
-                            <Button asChild size="sm" variant="outline">
-                              <Link to="/admin/laboratorios/$id" params={{ id: lab.id }}>
-                                Visualizar
-                              </Link>
-                            </Button>
-                            <Button asChild size="sm" variant="outline">
-                              <Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>
-                                Editar
-                              </Link>
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => toggleStatus(lab.id)}>
-                              {lab.status === "ativo" ? "Desativar" : "Ativar"}
-                            </Button>
-                          </div>
-                        </TableCell>
+        {!isLoading && !isError ? (
+          <>
+            <div className="hidden lg:block">
+              <Card>
+                <CardContent className="overflow-x-auto p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Unidade/Escola</TableHead>
+                        <TableHead>Responsável</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead>Cidade</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Cadastro</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map(({ laboratory: lab, accessEmail }) => (
+                        <TableRow key={lab.id}>
+                          <TableCell className="font-medium">{lab.name}</TableCell>
+                          <TableCell>{lab.schoolName}</TableCell>
+                          <TableCell>{lab.responsible || "—"}</TableCell>
+                          <TableCell>{accessEmail || "—"}</TableCell>
+                          <TableCell>{lab.city}</TableCell>
+                          <TableCell>{lab.state}</TableCell>
+                          <TableCell><StatusBadge status={lab.status} /></TableCell>
+                          <TableCell>{formatDate(lab.createdAt)}</TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button asChild size="sm" variant="outline">
+                                <Link to="/admin/laboratorios/$id" params={{ id: lab.id }}>Visualizar</Link>
+                              </Button>
+                              <Button asChild size="sm" variant="outline">
+                                <Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>Editar</Link>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={toggleStatus.isPending}
+                                onClick={() => void handleToggleStatus(lab)}
+                              >
+                                {lab.status === "ativo" ? "Desativar" : "Ativar"}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:hidden">
-          {filtered.map((lab) => (
-            <LaboratoryCard
-              key={lab.id}
-              laboratory={lab}
-              accessEmail={getByLaboratoryId(lab.id)?.email}
-              onToggleStatus={toggleStatus}
-            />
-          ))}
-        </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:hidden">
+              {filtered.map(({ laboratory: lab, accessEmail }) => (
+                <LaboratoryCard
+                  key={lab.id}
+                  laboratory={lab}
+                  accessEmail={accessEmail}
+                  onToggleStatus={() => void handleToggleStatus(lab)}
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
       </div>
     </AdminLayout>
   );
