@@ -1,15 +1,16 @@
+import type { ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { DashboardCard } from "@/components/DashboardCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLaboratories } from "@/lib/laboratories-store";
-import { useLaboratoryAccess } from "@/lib/laboratory-access-store";
-import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
-import { useExams } from "@/lib/exams-store";
-import { getLocalDateString } from "@/lib/date";
+import {
+  useAdminLaboratoryQuery,
+  useToggleLaboratoryStatusMutation,
+} from "@/lib/admin-laboratories-queries";
 import { dayOfWeekLabels } from "@/types/laboratory-schedule";
 
 export const Route = createFileRoute("/admin/laboratorios/$id/")({
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/admin/laboratorios/$id/")({
   component: DetalhesLaboratorio,
 });
 
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
+function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -34,13 +35,29 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
 function DetalhesLaboratorio() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { getById, toggleStatus } = useLaboratories();
-  const { getByLaboratoryId } = useLaboratoryAccess();
-  const { listByLaboratory: listSchedules } = useLaboratorySchedules();
-  const { listByLaboratory: listExams } = useExams();
-  const lab = getById(id);
+  const { data: details, isLoading, isError, refetch } = useAdminLaboratoryQuery(id);
+  const toggleStatus = useToggleLaboratoryStatusMutation();
 
-  if (!lab) {
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <p className="text-sm text-muted-foreground">Carregando laboratório...</p>
+      </AdminLayout>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AdminLayout>
+        <div className="space-y-3">
+          <p className="text-sm text-destructive">Não foi possível carregar o laboratório.</p>
+          <Button variant="outline" onClick={() => void refetch()}>Tentar novamente</Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!details) {
     return (
       <AdminLayout>
         <div className="space-y-4">
@@ -51,10 +68,18 @@ function DetalhesLaboratorio() {
     );
   }
 
-  const access = getByLaboratoryId(id);
-  const schedules = listSchedules(id);
-  const exams = listExams(id);
-  const today = getLocalDateString();
+  const { laboratory: lab, accessEmail, schedules, examSummary } = details;
+
+  const handleToggleStatus = async () => {
+    if (toggleStatus.isPending) return;
+    try {
+      await toggleStatus.mutateAsync({ id: lab.id, currentStatus: lab.status });
+      toast.success(lab.status === "ativo" ? "Laboratório desativado." : "Laboratório ativado.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível alterar o status.";
+      toast.error(message);
+    }
+  };
 
   return (
     <AdminLayout>
@@ -65,8 +90,12 @@ function DetalhesLaboratorio() {
             <p className="text-sm text-muted-foreground">{lab.schoolName}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild><Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>Editar laboratório</Link></Button>
-            <Button variant="outline" onClick={() => toggleStatus(lab.id)}>{lab.status === "ativo" ? "Desativar" : "Ativar"}</Button>
+            <Button asChild>
+              <Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>Editar laboratório</Link>
+            </Button>
+            <Button variant="outline" disabled={toggleStatus.isPending} onClick={() => void handleToggleStatus()}>
+              {lab.status === "ativo" ? "Desativar" : "Ativar"}
+            </Button>
             <Button variant="ghost" onClick={() => navigate({ to: "/admin/laboratorios" })}>Voltar</Button>
           </div>
         </div>
@@ -83,16 +112,14 @@ function DetalhesLaboratorio() {
               <Info label="Estado" value={lab.state} />
               <Info label="Status" value={<StatusBadge status={lab.status} />} />
               <Info label="Computadores" value={`${lab.computerCount} PCs`} />
-              <Info label="Data de cadastro" value={lab.createdAt} />
+              <Info label="Data de cadastro" value={new Date(lab.createdAt).toLocaleDateString("pt-BR")} />
             </dl>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Conta de acesso</CardTitle></CardHeader>
-          <CardContent>
-            <Info label="E-mail/login" value={access?.email} />
-          </CardContent>
+          <CardContent><Info label="E-mail/login" value={accessEmail} /></CardContent>
         </Card>
 
         <Card>
@@ -115,10 +142,10 @@ function DetalhesLaboratorio() {
         <div>
           <h2 className="mb-3 text-base font-semibold">Resumo de provas</h2>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <DashboardCard title="Total de provas" value={exams.length} />
-            <DashboardCard title="Pendentes" value={exams.filter((exam) => exam.status === "pendente").length} />
-            <DashboardCard title="Aprovadas" value={exams.filter((exam) => exam.status === "aprovado").length} />
-            <DashboardCard title="Provas hoje" value={exams.filter((exam) => exam.examDate === today).length} />
+            <DashboardCard title="Total de provas" value={examSummary.total} />
+            <DashboardCard title="Pendentes" value={examSummary.pending} />
+            <DashboardCard title="Aprovadas" value={examSummary.approved} />
+            <DashboardCard title="Provas hoje" value={examSummary.today} />
           </div>
         </div>
       </div>
