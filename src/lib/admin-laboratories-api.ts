@@ -2,13 +2,28 @@ import { supabase } from "@/lib/supabase";
 import type { Laboratory, LaboratoryAccessFormValues, LaboratoryFormValues } from "@/types/laboratory";
 import type { LaboratorySchedule, LaboratoryScheduleInput } from "@/types/laboratory-schedule";
 
+const BUSINESS_TIME_ZONE = "America/Manaus";
+
 export interface AdminLaboratoryRecord {
   laboratory: Laboratory;
   accessEmail: string;
 }
 
+export interface AdminExamSummary {
+  total: number;
+  pending: number;
+  approved: number;
+  today: number;
+}
+
 export interface AdminLaboratoryDetails extends AdminLaboratoryRecord {
   schedules: LaboratorySchedule[];
+  examSummary: AdminExamSummary;
+}
+
+export interface AdminDashboardData {
+  laboratories: AdminLaboratoryRecord[];
+  totalExams: number;
 }
 
 function mapLaboratory(row: {
@@ -61,6 +76,17 @@ function mapSchedule(row: {
   };
 }
 
+function getTodayInBusinessTimeZone() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 export async function listAdminLaboratories(): Promise<AdminLaboratoryRecord[]> {
   const [{ data: labs, error: labsError }, { data: profiles, error: profilesError }] = await Promise.all([
     supabase.from("laboratories").select("*").order("created_at", { ascending: false }),
@@ -83,32 +109,61 @@ export async function listAdminLaboratories(): Promise<AdminLaboratoryRecord[]> 
 }
 
 export async function getAdminLaboratory(id: string): Promise<AdminLaboratoryDetails | null> {
-  const [{ data: lab, error: labError }, { data: profile, error: profileError }, { data: schedules, error: schedulesError }] =
-    await Promise.all([
-      supabase.from("laboratories").select("*").eq("id", id).maybeSingle(),
-      supabase
-        .from("profiles")
-        .select("email")
-        .eq("role", "laboratory")
-        .eq("laboratory_id", id)
-        .maybeSingle(),
-      supabase
-        .from("laboratory_schedules")
-        .select("*")
-        .eq("laboratory_id", id)
-        .order("day_of_week")
-        .order("start_time"),
-    ]);
+  const [
+    { data: lab, error: labError },
+    { data: profile, error: profileError },
+    { data: schedules, error: schedulesError },
+    { data: exams, error: examsError },
+  ] = await Promise.all([
+    supabase.from("laboratories").select("*").eq("id", id).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("email")
+      .eq("role", "laboratory")
+      .eq("laboratory_id", id)
+      .maybeSingle(),
+    supabase
+      .from("laboratory_schedules")
+      .select("*")
+      .eq("laboratory_id", id)
+      .order("day_of_week")
+      .order("start_time"),
+    supabase.from("exams").select("status, exam_date").eq("laboratory_id", id),
+  ]);
 
   if (labError) throw labError;
   if (profileError) throw profileError;
   if (schedulesError) throw schedulesError;
+  if (examsError) throw examsError;
   if (!lab) return null;
+
+  const today = getTodayInBusinessTimeZone();
+  const examRows = exams ?? [];
 
   return {
     laboratory: mapLaboratory(lab),
     accessEmail: profile?.email ?? "",
     schedules: (schedules ?? []).map(mapSchedule),
+    examSummary: {
+      total: examRows.length,
+      pending: examRows.filter((exam) => exam.status === "pendente").length,
+      approved: examRows.filter((exam) => exam.status === "aprovado").length,
+      today: examRows.filter((exam) => exam.exam_date === today).length,
+    },
+  };
+}
+
+export async function getAdminDashboardData(): Promise<AdminDashboardData> {
+  const [laboratories, examsResult] = await Promise.all([
+    listAdminLaboratories(),
+    supabase.from("exams").select("id", { count: "exact", head: true }),
+  ]);
+
+  if (examsResult.error) throw examsResult.error;
+
+  return {
+    laboratories,
+    totalExams: examsResult.count ?? 0,
   };
 }
 
@@ -142,6 +197,33 @@ export async function provisionLaboratory(
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
   return data as { laboratoryId: string; userId: string; email: string };
+}
+
+export async function updateLaboratory(
+  id: string,
+  values: LaboratoryFormValues,
+  schedules: LaboratoryScheduleInput[],
+) {
+  const { data, error } = await supabase.functions.invoke("update-laboratory", {
+    body: {
+      laboratoryId: id,
+      laboratory: {
+        name: values.name,
+        schoolName: values.schoolName,
+        responsible: values.responsible,
+        phone: values.phone,
+        city: values.city,
+        state: values.state,
+        status: values.status,
+        computerCount: values.computerCount,
+      },
+      schedules,
+    },
+  });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data as { laboratoryId: string };
 }
 
 export async function toggleLaboratoryStatus(id: string, currentStatus: Laboratory["status"]) {

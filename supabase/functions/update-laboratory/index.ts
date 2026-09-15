@@ -22,6 +22,8 @@ type UpdatePayload = {
   schedules: ScheduleInput[];
 };
 
+const BUSINESS_TIME_ZONE = "America/Manaus";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -41,6 +43,18 @@ function isValidTime(value: string) {
 
 function dayOfWeekFromDate(date: string) {
   return new Date(`${date}T00:00:00Z`).getUTCDay();
+}
+
+function getTodayInBusinessTimeZone() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 Deno.serve(async (req) => {
@@ -127,7 +141,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Não foi possível carregar os horários atuais." }, 500);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayInBusinessTimeZone();
   const { data: futureExams, error: futureExamsError } = await service
     .from("exams")
     .select("exam_date, pc_number, student_class_time")
@@ -140,13 +154,10 @@ Deno.serve(async (req) => {
 
   for (const exam of futureExams ?? []) {
     if (exam.pc_number > payload.laboratory.computerCount) {
-      return jsonResponse(
-        {
-          error:
-            "A quantidade de computadores não pode ser reduzida porque existem provas de hoje ou futuras agendadas em PCs acima do novo limite.",
-        },
-        409,
-      );
+      return jsonResponse({
+        error:
+          "A quantidade de computadores não pode ser reduzida porque existem provas de hoje ou futuras agendadas em PCs acima do novo limite.",
+      }, 409);
     }
 
     const examDay = dayOfWeekFromDate(exam.exam_date);
@@ -159,13 +170,10 @@ Deno.serve(async (req) => {
     );
 
     if (!remainsValid) {
-      return jsonResponse(
-        {
-          error:
-            "Os horários não podem ser alterados dessa forma porque existem provas de hoje ou futuras usando um horário que seria removido ou desativado.",
-        },
-        409,
-      );
+      return jsonResponse({
+        error:
+          "Os horários não podem ser alterados dessa forma porque existem provas de hoje ou futuras usando um horário que seria removido ou desativado.",
+      }, 409);
     }
   }
 

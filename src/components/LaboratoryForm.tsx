@@ -28,11 +28,12 @@ interface LaboratoryFormProps {
   initialValues?: Partial<LaboratoryFormValues>;
   initialAccess?: Partial<LaboratoryAccessFormValues>;
   initialSchedules?: LaboratoryScheduleInput[];
+  submitting?: boolean;
   onSubmit: (
     values: LaboratoryFormValues,
     access: LaboratoryAccessFormValues,
     schedules: LaboratoryScheduleInput[],
-  ) => void;
+  ) => void | Promise<void>;
   onCancel: () => void;
   onResetPassword?: () => void;
 }
@@ -59,6 +60,7 @@ export function LaboratoryForm({
   initialValues,
   initialAccess,
   initialSchedules = [],
+  submitting = false,
   onSubmit,
   onCancel,
   onResetPassword,
@@ -107,6 +109,8 @@ export function LaboratoryForm({
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
+
     const nextErrors: Record<string, string> = {};
     if (!values.name.trim()) nextErrors.name = "Informe o nome do laboratório.";
     if (!values.schoolName.trim()) nextErrors.schoolName = "Informe a unidade/escola.";
@@ -127,7 +131,7 @@ export function LaboratoryForm({
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
-    onSubmit(values, access, schedules);
+    void onSubmit(values, access, schedules);
   };
 
   const field = (
@@ -145,6 +149,7 @@ export function LaboratoryForm({
         placeholder={options?.placeholder}
         value={(values[id] as string) ?? ""}
         onChange={(e) => set(id, e.target.value)}
+        disabled={submitting}
       />
       {errors[id] ? <p className="text-xs text-destructive">{errors[id]}</p> : null}
     </div>
@@ -153,7 +158,7 @@ export function LaboratoryForm({
   const accessField = (
     id: keyof LaboratoryAccessFormValues,
     label: string,
-    options?: { required?: boolean; type?: string },
+    options?: { required?: boolean; type?: string; readOnly?: boolean },
   ) => (
     <div className="space-y-1.5">
       <Label htmlFor={id}>
@@ -163,6 +168,8 @@ export function LaboratoryForm({
         id={id}
         type={options?.type ?? "text"}
         value={access[id] ?? ""}
+        readOnly={options?.readOnly}
+        disabled={submitting}
         onChange={(e) => setAccessField(id, e.target.value)}
       />
       {errors[id] ? <p className="text-xs text-destructive">{errors[id]}</p> : null}
@@ -193,6 +200,7 @@ export function LaboratoryForm({
               type="number"
               min={1}
               value={String(values.computerCount ?? "")}
+              disabled={submitting}
               onChange={(e) => setValues((prev) => ({ ...prev, computerCount: Number(e.target.value) }))}
             />
             <p className="text-xs text-muted-foreground">
@@ -207,9 +215,14 @@ export function LaboratoryForm({
               <p className="text-xs text-muted-foreground">
                 Cadastre os intervalos por dia da semana. A data escolhida na prova determinará quais horários estarão disponíveis.
               </p>
+              {mode === "edit" ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Alterações que invalidariam provas de hoje ou futuras serão bloqueadas pelo sistema.
+                </p>
+              ) : null}
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
-              <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
+              <Select value={dayOfWeek} onValueChange={setDayOfWeek} disabled={submitting}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(dayOfWeekLabels).map(([day, label]) => (
@@ -217,9 +230,9 @@ export function LaboratoryForm({
                   ))}
                 </SelectContent>
               </Select>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-              <Button type="button" variant="outline" onClick={addSchedule}>Adicionar horário</Button>
+              <Input type="time" value={startTime} disabled={submitting} onChange={(e) => setStartTime(e.target.value)} />
+              <Input type="time" value={endTime} disabled={submitting} onChange={(e) => setEndTime(e.target.value)} />
+              <Button type="button" variant="outline" disabled={submitting} onClick={addSchedule}>Adicionar horário</Button>
             </div>
             {errors.schedules ? <p className="text-xs text-destructive">{errors.schedules}</p> : null}
 
@@ -234,7 +247,8 @@ export function LaboratoryForm({
                       <button
                         type="button"
                         aria-label="Remover horário"
-                        className="rounded p-0.5 hover:bg-background"
+                        className="rounded p-0.5 hover:bg-background disabled:opacity-50"
+                        disabled={submitting}
                         onClick={() => removeSchedule(index)}
                       >
                         <X className="h-3 w-3" />
@@ -249,11 +263,20 @@ export function LaboratoryForm({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Conta de acesso</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-base">Conta de acesso</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          {accessField("email", "E-mail/login", { required: true, type: "email" })}
+          <div>
+            {accessField("email", "E-mail/login", {
+              required: true,
+              type: "email",
+              readOnly: mode === "edit",
+            })}
+            {mode === "edit" ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Alterações de e-mail serão tratadas separadamente no gerenciamento da conta.
+              </p>
+            ) : null}
+          </div>
           {mode === "create" ? (
             <>
               {accessField("password", "Senha provisória", { required: true, type: "password" })}
@@ -261,7 +284,9 @@ export function LaboratoryForm({
             </>
           ) : (
             <div className="flex items-end">
-              <Button type="button" variant="outline" onClick={onResetPassword}>Redefinir senha</Button>
+              <Button type="button" variant="outline" disabled={submitting} onClick={onResetPassword}>
+                Redefinir senha
+              </Button>
             </div>
           )}
         </CardContent>
@@ -274,6 +299,7 @@ export function LaboratoryForm({
             value={values.status}
             onValueChange={(value) => set("status", value as LaboratoryStatus)}
             className="flex gap-6"
+            disabled={submitting}
           >
             <div className="flex items-center gap-2">
               <RadioGroupItem value="ativo" id="status-ativo" />
@@ -288,8 +314,12 @@ export function LaboratoryForm({
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit">{mode === "create" ? "Cadastrar laboratório" : "Salvar alterações"}</Button>
+        <Button type="button" variant="outline" disabled={submitting} onClick={onCancel}>Cancelar</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting
+            ? mode === "create" ? "Cadastrando..." : "Salvando..."
+            : mode === "create" ? "Cadastrar laboratório" : "Salvar alterações"}
+        </Button>
       </div>
     </form>
   );
