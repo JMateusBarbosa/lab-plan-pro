@@ -39,6 +39,10 @@ function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function dayOfWeekFromDate(date: string) {
+  return new Date(`${date}T00:00:00Z`).getUTCDay();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Método não permitido." }, 405);
@@ -121,6 +125,48 @@ Deno.serve(async (req) => {
     .eq("laboratory_id", payload.laboratoryId);
   if (oldSchedulesError) {
     return jsonResponse({ error: "Não foi possível carregar os horários atuais." }, 500);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: futureExams, error: futureExamsError } = await service
+    .from("exams")
+    .select("exam_date, pc_number, student_class_time")
+    .eq("laboratory_id", payload.laboratoryId)
+    .gte("exam_date", today);
+
+  if (futureExamsError) {
+    return jsonResponse({ error: "Não foi possível validar as provas futuras do laboratório." }, 500);
+  }
+
+  for (const exam of futureExams ?? []) {
+    if (exam.pc_number > payload.laboratory.computerCount) {
+      return jsonResponse(
+        {
+          error:
+            "A quantidade de computadores não pode ser reduzida porque existem provas de hoje ou futuras agendadas em PCs acima do novo limite.",
+        },
+        409,
+      );
+    }
+
+    const examDay = dayOfWeekFromDate(exam.exam_date);
+    const examTime = exam.student_class_time.slice(0, 5);
+    const remainsValid = payload.schedules.some(
+      (schedule) =>
+        (schedule.active ?? true) &&
+        schedule.dayOfWeek === examDay &&
+        schedule.startTime === examTime,
+    );
+
+    if (!remainsValid) {
+      return jsonResponse(
+        {
+          error:
+            "Os horários não podem ser alterados dessa forma porque existem provas de hoje ou futuras usando um horário que seria removido ou desativado.",
+        },
+        409,
+      );
+    }
   }
 
   const restore = async () => {
