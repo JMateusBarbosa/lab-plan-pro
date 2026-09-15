@@ -122,7 +122,11 @@ export function LaboratoryForm({
     }
     if (schedules.length === 0) nextErrors.schedules = "Cadastre pelo menos um horário.";
     if (mode === "create") {
-      if (!access.password) nextErrors.password = "Informe a senha provisória.";
+      if (!access.password) {
+        nextErrors.password = "Informe a senha provisória.";
+      } else if (access.password.length < 6) {
+        nextErrors.password = "A senha provisória deve ter pelo menos 6 caracteres.";
+      }
       if (!access.confirmPassword) nextErrors.confirmPassword = "Confirme a senha.";
       if (access.password && access.confirmPassword && access.password !== access.confirmPassword) {
         nextErrors.confirmPassword = "As senhas não conferem.";
