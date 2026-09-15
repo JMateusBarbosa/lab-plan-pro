@@ -87,6 +87,65 @@ function getTodayInBusinessTimeZone() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function getMessageFromFunctionPayload(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const record = payload as Record<string, unknown>;
+  if (typeof record.error === "string" && record.error.trim()) return record.error.trim();
+  if (typeof record.message === "string" && record.message.trim()) return record.message.trim();
+
+  if (record.error && typeof record.error === "object") {
+    const nestedError = record.error as Record<string, unknown>;
+    if (typeof nestedError.message === "string" && nestedError.message.trim()) {
+      return nestedError.message.trim();
+    }
+  }
+
+  return null;
+}
+
+async function throwFunctionError(error: unknown, fallback: string): Promise<never> {
+  let responseStatus: number | null = null;
+
+  if (error && typeof error === "object" && "context" in error) {
+    const context = (error as { context?: unknown }).context;
+
+    if (context && typeof context === "object" && "clone" in context) {
+      const response = context as Response;
+      responseStatus = typeof response.status === "number" ? response.status : null;
+
+      try {
+        const payload = (await response.clone().json()) as unknown;
+        const message = getMessageFromFunctionPayload(payload);
+        if (message) throw new Error(message);
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message !== "Unexpected end of JSON input") {
+          throw parseError;
+        }
+      }
+
+      try {
+        const text = (await response.clone().text()).trim();
+        if (text) throw new Error(text);
+      } catch (readError) {
+        if (readError instanceof Error && readError.message && readError.message !== "Body is unusable") {
+          throw readError;
+        }
+      }
+    }
+  }
+
+  if (
+    error instanceof Error &&
+    error.message &&
+    error.message !== "Edge Function returned a non-2xx status code"
+  ) {
+    throw error;
+  }
+
+  throw new Error(responseStatus ? `${fallback} (HTTP ${responseStatus}).` : fallback);
+}
+
 export async function listAdminLaboratories(): Promise<AdminLaboratoryRecord[]> {
   const [{ data: labs, error: labsError }, { data: profiles, error: profilesError }] = await Promise.all([
     supabase.from("laboratories").select("*").order("created_at", { ascending: false }),
@@ -194,7 +253,9 @@ export async function provisionLaboratory(
     },
   });
 
-  if (error) throw error;
+  if (error) {
+    await throwFunctionError(error, "Não foi possível cadastrar o laboratório.");
+  }
   if (data?.error) throw new Error(data.error);
   return data as { laboratoryId: string; userId: string; email: string };
 }
@@ -221,7 +282,9 @@ export async function updateLaboratory(
     },
   });
 
-  if (error) throw error;
+  if (error) {
+    await throwFunctionError(error, "Não foi possível atualizar o laboratório.");
+  }
   if (data?.error) throw new Error(data.error);
   return data as { laboratoryId: string };
 }
