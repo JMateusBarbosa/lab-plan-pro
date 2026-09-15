@@ -24,6 +24,7 @@ function NovoLaboratorio() {
         <h1 className="text-xl font-semibold sm:text-2xl">Cadastrar laboratório</h1>
         <LaboratoryForm
           mode="create"
+          submitting={provision.isPending}
           onCancel={() => navigate({ to: "/admin/laboratorios" })}
           onSubmit={async (values, access, schedules) => {
             if (provision.isPending) return;
