@@ -42,6 +42,35 @@ function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function translateAuthError(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("already been registered") ||
+    normalized.includes("already registered") ||
+    normalized.includes("user already exists")
+  ) {
+    return "Já existe um usuário cadastrado com este e-mail.";
+  }
+
+  if (normalized.includes("password") && normalized.includes("6")) {
+    return "A senha provisória deve ter pelo menos 6 caracteres.";
+  }
+
+  if (
+    normalized.includes("database error creating new user") ||
+    normalized.includes("database error saving new user")
+  ) {
+    return "Não foi possível criar a conta de acesso no momento. Tente novamente ou contate o administrador do sistema.";
+  }
+
+  if (normalized.includes("invalid email")) {
+    return "Informe um e-mail válido para a conta de acesso.";
+  }
+
+  return message;
+}
+
 function validatePayload(payload: ProvisionPayload) {
   const { laboratory, schedules, access } = payload;
 
@@ -195,10 +224,29 @@ Deno.serve(async (req) => {
     });
 
     if (authError || !authData.user) {
-      throw new Error(authError?.message || "Não foi possível criar a conta de acesso.");
+      throw new Error(
+        authError?.message
+          ? translateAuthError(authError.message)
+          : "Não foi possível criar a conta de acesso.",
+      );
     }
 
     authUserId = authData.user.id;
+
+    const { error: profileInsertError } = await service.from("profiles").insert({
+      id: authUserId,
+      role: "laboratory",
+      laboratory_id: laboratoryId,
+      email,
+    });
+
+    if (profileInsertError) {
+      throw new Error(
+        profileInsertError.code === "23505"
+          ? "Já existe uma conta de acesso vinculada a este laboratório ou e-mail."
+          : "A conta foi criada, mas não foi possível concluir o perfil do laboratório.",
+      );
+    }
 
     const { data: createdProfile, error: createdProfileError } = await service
       .from("profiles")
