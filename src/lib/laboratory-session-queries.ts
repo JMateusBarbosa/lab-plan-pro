@@ -10,7 +10,10 @@ export function useLaboratorySessionQuery() {
     queryKey: laboratorySessionKey,
     queryFn: getLaboratorySession,
     retry: false,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 }
 
