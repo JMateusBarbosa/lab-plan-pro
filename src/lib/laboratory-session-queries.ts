@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getLaboratorySession, signOutLaboratory } from "@/lib/laboratory-session-api";
 
@@ -15,13 +16,14 @@ export function useLaboratorySessionQuery() {
 export function useLaboratorySessionActions() {
   const queryClient = useQueryClient();
 
-  return {
-    async clearSession() {
-      await signOutLaboratory();
-      queryClient.removeQueries({ queryKey: laboratorySessionKey });
-    },
-    async refreshSession() {
-      await queryClient.invalidateQueries({ queryKey: laboratorySessionKey });
-    },
-  };
+  const clearSession = useCallback(async () => {
+    await signOutLaboratory();
+    queryClient.removeQueries({ queryKey: laboratorySessionKey });
+  }, [queryClient]);
+
+  const refreshSession = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: laboratorySessionKey });
+  }, [queryClient]);
+
+  return { clearSession, refreshSession };
 }
