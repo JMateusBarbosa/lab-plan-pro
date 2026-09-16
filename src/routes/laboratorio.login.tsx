@@ -1,10 +1,15 @@
 import { useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInLaboratory } from "@/lib/laboratory-session-api";
+import {
+  laboratoryQueryRootKey,
+  laboratorySessionKey,
+} from "@/lib/laboratory-session-queries";
 
 export const Route = createFileRoute("/laboratorio/login")({
   head: () => ({
@@ -23,6 +28,7 @@ export const Route = createFileRoute("/laboratorio/login")({
 
 function LaboratorioLogin() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -40,7 +46,9 @@ function LaboratorioLogin() {
 
     setLoading(true);
     try {
-      await signInLaboratory(email, password);
+      const session = await signInLaboratory(email, password);
+      queryClient.removeQueries({ queryKey: laboratoryQueryRootKey });
+      queryClient.setQueryData(laboratorySessionKey, session);
       navigate({ to: "/laboratorio" });
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Não foi possível entrar.");
