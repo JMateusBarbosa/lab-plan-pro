@@ -1,25 +1,27 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  corsHeadersForRequest,
+  handleCorsPreflight,
+  isOriginAllowed,
+} from "../_shared/cors.ts";
 
 type StatusPayload = {
   laboratoryId: string;
   status: "ativo" | "inativo";
 };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeaders = corsHeadersForRequest(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  if (!isOriginAllowed(req.headers.get("Origin"))) {
+    return jsonResponse({ error: "Origem não autorizada." }, 403);
+  }
   if (req.method !== "POST") return jsonResponse({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -39,14 +41,15 @@ Deno.serve(async (req) => {
 
   const token = authorization.slice("Bearer ".length);
   const { data: userData, error: userError } = await service.auth.getUser(token);
-  if (userError || !userData.user) {
+  const caller = userData.user;
+  if (userError || !caller) {
     return jsonResponse({ error: "Sessão inválida ou expirada." }, 401);
   }
 
   const { data: profile, error: profileError } = await service
     .from("profiles")
     .select("role")
-    .eq("id", userData.user.id)
+    .eq("id", caller.id)
     .single();
 
   if (profileError || profile?.role !== "admin") {
@@ -64,19 +67,17 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Dados de status inválidos." }, 400);
   }
 
-  const { data: laboratory, error: laboratoryError } = await service
-    .from("laboratories")
-    .update({ status: payload.status })
-    .eq("id", payload.laboratoryId)
-    .select("id, status")
-    .maybeSingle();
+  const { error } = await service.rpc("admin_set_laboratory_status", {
+    p_actor_user_id: caller.id,
+    p_laboratory_id: payload.laboratoryId,
+    p_status: payload.status,
+  });
 
-  if (laboratoryError) {
-    return jsonResponse({ error: "Não foi possível alterar o status do laboratório." }, 500);
-  }
-  if (!laboratory) {
-    return jsonResponse({ error: "Laboratório não encontrado." }, 404);
+  if (error) {
+    const message = error.message || "Não foi possível alterar o status do laboratório.";
+    const status = message.includes("não encontrado") ? 404 : 400;
+    return jsonResponse({ error: message }, status);
   }
 
-  return jsonResponse({ laboratoryId: laboratory.id, status: laboratory.status });
+  return jsonResponse({ laboratoryId: payload.laboratoryId, status: payload.status });
 });

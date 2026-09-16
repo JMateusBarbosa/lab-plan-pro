@@ -52,12 +52,12 @@ function translateExamError(error: DatabaseError) {
     return "Esta tentativa já possui uma recuperação vinculada.";
   }
 
-  if (error.code === "23503" && combined.includes("exams_previous_exam_id_fkey")) {
-    return "Esta prova possui uma recuperação vinculada e não pode ser excluída.";
-  }
-
   if (error.code === "42501" || combined.includes("row-level security")) {
     return "Você não possui permissão para realizar esta operação.";
+  }
+
+  if (combined.includes("prova não encontrada ou já excluída")) {
+    return "Esta prova não existe mais ou já foi excluída.";
   }
 
   if (combined.includes("pc") && combined.includes("não existe")) return error.message;
@@ -133,6 +133,6 @@ export async function updateLaboratoryExam(id: string, values: ExamFormValues): 
 }
 
 export async function deleteLaboratoryExam(id: string) {
-  const { error } = await supabase.from("exams").delete().eq("id", id);
+  const { error } = await supabase.rpc("soft_delete_exam", { p_exam_id: id });
   if (error) throw new Error(translateExamError(error));
 }

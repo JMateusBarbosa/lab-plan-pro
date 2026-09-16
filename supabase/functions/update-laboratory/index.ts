@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  corsHeadersForRequest,
+  handleCorsPreflight,
+  isOriginAllowed,
+} from "../_shared/cors.ts";
 
 type ScheduleInput = {
   dayOfWeek: number;
@@ -22,43 +27,22 @@ type UpdatePayload = {
   schedules: ScheduleInput[];
 };
 
-const BUSINESS_TIME_ZONE = "America/Manaus";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
-function dayOfWeekFromDate(date: string) {
-  return new Date(`${date}T00:00:00Z`).getUTCDay();
-}
-
-function getTodayInBusinessTimeZone() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: BUSINESS_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeaders = corsHeadersForRequest(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  if (!isOriginAllowed(req.headers.get("Origin"))) {
+    return jsonResponse({ error: "Origem não autorizada." }, 403);
+  }
   if (req.method !== "POST") return jsonResponse({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -75,14 +59,16 @@ Deno.serve(async (req) => {
   const service = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
   const token = authorization.slice("Bearer ".length);
   const { data: userData, error: userError } = await service.auth.getUser(token);
-  if (userError || !userData.user) return jsonResponse({ error: "Sessão inválida ou expirada." }, 401);
+  const caller = userData.user;
+  if (userError || !caller) return jsonResponse({ error: "Sessão inválida ou expirada." }, 401);
 
   const { data: profile, error: profileError } = await service
     .from("profiles")
     .select("role")
-    .eq("id", userData.user.id)
+    .eq("id", caller.id)
     .single();
   if (profileError || profile?.role !== "admin") {
     return jsonResponse({ error: "Apenas administradores podem atualizar laboratórios." }, 403);
@@ -124,113 +110,18 @@ Deno.serve(async (req) => {
     uniqueStarts.add(key);
   }
 
-  const { data: oldLaboratory, error: oldLaboratoryError } = await service
-    .from("laboratories")
-    .select("*")
-    .eq("id", payload.laboratoryId)
-    .single();
-  if (oldLaboratoryError || !oldLaboratory) {
-    return jsonResponse({ error: "Laboratório não encontrado." }, 404);
+  const { error } = await service.rpc("admin_update_laboratory_config", {
+    p_actor_user_id: caller.id,
+    p_laboratory_id: payload.laboratoryId,
+    p_laboratory: payload.laboratory,
+    p_schedules: payload.schedules,
+  });
+
+  if (error) {
+    const message = error.message || "Falha ao atualizar laboratório.";
+    const status = message.includes("não pode") || message.includes("não podem") ? 409 : 400;
+    return jsonResponse({ error: message }, status);
   }
 
-  const { data: oldSchedules, error: oldSchedulesError } = await service
-    .from("laboratory_schedules")
-    .select("day_of_week, start_time, end_time, active")
-    .eq("laboratory_id", payload.laboratoryId);
-  if (oldSchedulesError) {
-    return jsonResponse({ error: "Não foi possível carregar os horários atuais." }, 500);
-  }
-
-  const today = getTodayInBusinessTimeZone();
-  const { data: futureExams, error: futureExamsError } = await service
-    .from("exams")
-    .select("exam_date, pc_number, student_class_time")
-    .eq("laboratory_id", payload.laboratoryId)
-    .gte("exam_date", today);
-
-  if (futureExamsError) {
-    return jsonResponse({ error: "Não foi possível validar as provas futuras do laboratório." }, 500);
-  }
-
-  for (const exam of futureExams ?? []) {
-    if (exam.pc_number > payload.laboratory.computerCount) {
-      return jsonResponse({
-        error:
-          "A quantidade de computadores não pode ser reduzida porque existem provas de hoje ou futuras agendadas em PCs acima do novo limite.",
-      }, 409);
-    }
-
-    const examDay = dayOfWeekFromDate(exam.exam_date);
-    const examTime = exam.student_class_time.slice(0, 5);
-    const remainsValid = payload.schedules.some(
-      (schedule) =>
-        (schedule.active ?? true) &&
-        schedule.dayOfWeek === examDay &&
-        schedule.startTime === examTime,
-    );
-
-    if (!remainsValid) {
-      return jsonResponse({
-        error:
-          "Os horários não podem ser alterados dessa forma porque existem provas de hoje ou futuras usando um horário que seria removido ou desativado.",
-      }, 409);
-    }
-  }
-
-  const restore = async () => {
-    await service.from("laboratories").update({
-      name: oldLaboratory.name,
-      school_name: oldLaboratory.school_name,
-      responsible: oldLaboratory.responsible,
-      phone: oldLaboratory.phone,
-      city: oldLaboratory.city,
-      state: oldLaboratory.state,
-      status: oldLaboratory.status,
-      computer_count: oldLaboratory.computer_count,
-    }).eq("id", payload.laboratoryId);
-
-    await service.from("laboratory_schedules").delete().eq("laboratory_id", payload.laboratoryId);
-    if (oldSchedules?.length) {
-      await service.from("laboratory_schedules").insert(
-        oldSchedules.map((schedule) => ({ ...schedule, laboratory_id: payload.laboratoryId })),
-      );
-    }
-  };
-
-  try {
-    const { error: updateError } = await service.from("laboratories").update({
-      name: payload.laboratory.name.trim(),
-      school_name: payload.laboratory.schoolName.trim(),
-      responsible: payload.laboratory.responsible?.trim() || null,
-      phone: payload.laboratory.phone?.trim() || null,
-      city: payload.laboratory.city.trim(),
-      state: payload.laboratory.state.trim(),
-      status: payload.laboratory.status,
-      computer_count: payload.laboratory.computerCount,
-    }).eq("id", payload.laboratoryId);
-    if (updateError) throw new Error(updateError.message);
-
-    const { error: deleteError } = await service
-      .from("laboratory_schedules")
-      .delete()
-      .eq("laboratory_id", payload.laboratoryId);
-    if (deleteError) throw new Error(deleteError.message);
-
-    const { error: insertError } = await service.from("laboratory_schedules").insert(
-      payload.schedules.map((schedule) => ({
-        laboratory_id: payload.laboratoryId,
-        day_of_week: schedule.dayOfWeek,
-        start_time: schedule.startTime,
-        end_time: schedule.endTime,
-        active: schedule.active ?? true,
-      })),
-    );
-    if (insertError) throw new Error(insertError.message);
-
-    return jsonResponse({ laboratoryId: payload.laboratoryId });
-  } catch (error) {
-    await restore();
-    const message = error instanceof Error ? error.message : "Falha ao atualizar laboratório.";
-    return jsonResponse({ error: message }, 400);
-  }
+  return jsonResponse({ laboratoryId: payload.laboratoryId });
 });

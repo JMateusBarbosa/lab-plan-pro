@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  corsHeadersForRequest,
+  handleCorsPreflight,
+  isOriginAllowed,
+} from "../_shared/cors.ts";
 
 type ScheduleInput = {
   dayOfWeek: number;
@@ -29,19 +34,6 @@ const MIN_PASSWORD_LENGTH = 12;
 const PASSWORD_POLICY_MESSAGE =
   "A senha provisória deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
@@ -56,6 +48,13 @@ function hasStrongPassword(password: string) {
   );
 }
 
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function translateAuthError(message: string) {
   const normalized = message.toLowerCase();
 
@@ -67,9 +66,7 @@ function translateAuthError(message: string) {
     return "Já existe um usuário cadastrado com este e-mail.";
   }
 
-  if (normalized.includes("password")) {
-    return PASSWORD_POLICY_MESSAGE;
-  }
+  if (normalized.includes("password")) return PASSWORD_POLICY_MESSAGE;
 
   if (
     normalized.includes("database error creating new user") ||
@@ -96,9 +93,7 @@ function validatePayload(payload: ProvisionPayload) {
     return "A quantidade de computadores deve ser um inteiro maior que zero.";
   }
   if (!access?.email?.trim()) return "Informe o e-mail de acesso.";
-  if (!access?.password || !hasStrongPassword(access.password)) {
-    return PASSWORD_POLICY_MESSAGE;
-  }
+  if (!access?.password || !hasStrongPassword(access.password)) return PASSWORD_POLICY_MESSAGE;
   if (!Array.isArray(schedules) || schedules.length === 0) {
     return "Cadastre pelo menos um horário para o laboratório.";
   }
@@ -123,24 +118,32 @@ function validatePayload(payload: ProvisionPayload) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const corsHeaders = corsHeadersForRequest(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 
-  if (req.method !== "POST") {
-    return jsonResponse({ error: "Método não permitido." }, 405);
+  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+  if (!isOriginAllowed(req.headers.get("Origin"))) {
+    return jsonResponse({ error: "Origem não autorizada." }, 403);
   }
+  if (req.method !== "POST") return jsonResponse({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const authorization = req.headers.get("Authorization");
+  const idempotencyKey = req.headers.get("x-idempotency-key")?.trim();
 
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonResponse({ error: "Configuração interna do Supabase ausente." }, 500);
   }
-
   if (!authorization?.startsWith("Bearer ")) {
     return jsonResponse({ error: "Sessão inválida." }, 401);
+  }
+  if (!idempotencyKey || idempotencyKey.length < 16 || idempotencyKey.length > 128) {
+    return jsonResponse({ error: "Chave de idempotência inválida." }, 400);
   }
 
   const service = createClient(supabaseUrl, serviceRoleKey, {
@@ -173,18 +176,66 @@ Deno.serve(async (req) => {
   }
 
   const validationError = validatePayload(payload);
-  if (validationError) {
-    return jsonResponse({ error: validationError }, 400);
-  }
+  if (validationError) return jsonResponse({ error: validationError }, 400);
 
   const email = payload.access.email.trim().toLowerCase();
+  const requestHash = await sha256Hex(
+    JSON.stringify({ laboratory: payload.laboratory, schedules: payload.schedules, email }),
+  );
+
+  const operation = "provision_laboratory";
+  const { error: claimError } = await service.from("admin_operation_requests").insert({
+    actor_user_id: caller.id,
+    operation,
+    idempotency_key: idempotencyKey,
+    request_hash: requestHash,
+    status: "processing",
+  });
+
+  if (claimError) {
+    if (claimError.code !== "23505") {
+      return jsonResponse({ error: "Não foi possível iniciar o provisionamento com segurança." }, 500);
+    }
+
+    const { data: existing, error: existingError } = await service
+      .from("admin_operation_requests")
+      .select("request_hash, status, result")
+      .eq("actor_user_id", caller.id)
+      .eq("operation", operation)
+      .eq("idempotency_key", idempotencyKey)
+      .single();
+
+    if (existingError || !existing) {
+      return jsonResponse({ error: "Não foi possível validar a tentativa anterior." }, 500);
+    }
+    if (existing.request_hash !== requestHash) {
+      return jsonResponse({ error: "Esta chave de idempotência já foi usada com outros dados." }, 409);
+    }
+    if (existing.status === "completed" && existing.result) {
+      return jsonResponse(existing.result, 200);
+    }
+    if (existing.status === "processing") {
+      return jsonResponse({ error: "Este cadastro já está sendo processado." }, 409);
+    }
+
+    const { error: retryError } = await service
+      .from("admin_operation_requests")
+      .update({ status: "processing", error_message: null, result: null })
+      .eq("actor_user_id", caller.id)
+      .eq("operation", operation)
+      .eq("idempotency_key", idempotencyKey)
+      .eq("status", "failed");
+
+    if (retryError) {
+      return jsonResponse({ error: "Não foi possível reiniciar a tentativa anterior." }, 500);
+    }
+  }
+
   let laboratoryId: string | null = null;
   let authUserId: string | null = null;
 
   const cleanup = async () => {
-    if (authUserId) {
-      await service.auth.admin.deleteUser(authUserId);
-    }
+    if (authUserId) await service.auth.admin.deleteUser(authUserId);
     if (laboratoryId) {
       await service.from("laboratory_schedules").delete().eq("laboratory_id", laboratoryId);
       await service.from("laboratories").delete().eq("id", laboratoryId);
@@ -213,18 +264,16 @@ Deno.serve(async (req) => {
 
     laboratoryId = laboratory.id;
 
-    const scheduleRows = payload.schedules.map((schedule) => ({
-      laboratory_id: laboratoryId,
-      day_of_week: schedule.dayOfWeek,
-      start_time: schedule.startTime,
-      end_time: schedule.endTime,
-      active: schedule.active ?? true,
-    }));
-
-    const { error: schedulesError } = await service.from("laboratory_schedules").insert(scheduleRows);
-    if (schedulesError) {
-      throw new Error(schedulesError.message);
-    }
+    const { error: schedulesError } = await service.from("laboratory_schedules").insert(
+      payload.schedules.map((schedule) => ({
+        laboratory_id: laboratoryId,
+        day_of_week: schedule.dayOfWeek,
+        start_time: schedule.startTime,
+        end_time: schedule.endTime,
+        active: schedule.active ?? true,
+      })),
+    );
+    if (schedulesError) throw new Error(schedulesError.message);
 
     const { data: authData, error: authError } = await service.auth.admin.createUser({
       email,
@@ -239,9 +288,7 @@ Deno.serve(async (req) => {
 
     if (authError || !authData.user) {
       throw new Error(
-        authError?.message
-          ? translateAuthError(authError.message)
-          : "Não foi possível criar a conta de acesso.",
+        authError?.message ? translateAuthError(authError.message) : "Não foi possível criar a conta de acesso.",
       );
     }
 
@@ -262,28 +309,40 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data: createdProfile, error: createdProfileError } = await service
-      .from("profiles")
-      .select("id, role, laboratory_id, email")
-      .eq("id", authUserId)
-      .single();
+    const result = { laboratoryId, userId: authUserId, email };
 
-    if (
-      createdProfileError ||
-      createdProfile?.role !== "laboratory" ||
-      createdProfile?.laboratory_id !== laboratoryId
-    ) {
-      throw new Error("A conta foi criada, mas o perfil do laboratório não foi provisionado corretamente.");
-    }
+    const { error: auditError } = await service.from("audit_logs").insert({
+      actor_user_id: caller.id,
+      actor_role: "admin",
+      laboratory_id: laboratoryId,
+      action: "provision",
+      entity_type: "laboratory",
+      entity_id: laboratoryId,
+      after_data: result,
+      metadata: { schoolName: payload.laboratory.schoolName },
+    });
+    if (auditError) throw new Error("O cadastro foi criado, mas não foi possível registrar a auditoria.");
 
-    return jsonResponse({
-      laboratoryId,
-      userId: authUserId,
-      email: createdProfile.email,
-    }, 201);
+    const { error: completeError } = await service
+      .from("admin_operation_requests")
+      .update({ status: "completed", result, error_message: null })
+      .eq("actor_user_id", caller.id)
+      .eq("operation", operation)
+      .eq("idempotency_key", idempotencyKey);
+    if (completeError) throw new Error("O cadastro foi criado, mas não foi possível concluir o controle da operação.");
+
+    return jsonResponse(result, 201);
   } catch (error) {
     await cleanup();
     const message = error instanceof Error ? error.message : "Falha ao cadastrar laboratório.";
+
+    await service
+      .from("admin_operation_requests")
+      .update({ status: "failed", error_message: message, result: null })
+      .eq("actor_user_id", caller.id)
+      .eq("operation", operation)
+      .eq("idempotency_key", idempotencyKey);
+
     return jsonResponse({ error: message }, 400);
   }
 });
