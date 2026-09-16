@@ -26,6 +26,8 @@ type ProvisionPayload = {
 };
 
 const MIN_PASSWORD_LENGTH = 12;
+const PASSWORD_POLICY_MESSAGE =
+  "A senha provisória deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +46,16 @@ function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function hasStrongPassword(password: string) {
+  return (
+    password.length >= MIN_PASSWORD_LENGTH &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
 function translateAuthError(message: string) {
   const normalized = message.toLowerCase();
 
@@ -56,7 +68,7 @@ function translateAuthError(message: string) {
   }
 
   if (normalized.includes("password")) {
-    return `A senha provisória deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+    return PASSWORD_POLICY_MESSAGE;
   }
 
   if (
@@ -84,8 +96,8 @@ function validatePayload(payload: ProvisionPayload) {
     return "A quantidade de computadores deve ser um inteiro maior que zero.";
   }
   if (!access?.email?.trim()) return "Informe o e-mail de acesso.";
-  if (!access?.password || access.password.length < MIN_PASSWORD_LENGTH) {
-    return `A senha provisória deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+  if (!access?.password || !hasStrongPassword(access.password)) {
+    return PASSWORD_POLICY_MESSAGE;
   }
   if (!Array.isArray(schedules) || schedules.length === 0) {
     return "Cadastre pelo menos um horário para o laboratório.";
