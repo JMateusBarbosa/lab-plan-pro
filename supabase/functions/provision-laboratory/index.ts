@@ -25,6 +25,8 @@ type ProvisionPayload = {
   };
 };
 
+const MIN_PASSWORD_LENGTH = 12;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -53,8 +55,8 @@ function translateAuthError(message: string) {
     return "Já existe um usuário cadastrado com este e-mail.";
   }
 
-  if (normalized.includes("password") && normalized.includes("6")) {
-    return "A senha provisória deve ter pelo menos 6 caracteres.";
+  if (normalized.includes("password")) {
+    return `A senha provisória deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
   }
 
   if (
@@ -82,8 +84,8 @@ function validatePayload(payload: ProvisionPayload) {
     return "A quantidade de computadores deve ser um inteiro maior que zero.";
   }
   if (!access?.email?.trim()) return "Informe o e-mail de acesso.";
-  if (!access?.password || access.password.length < 6) {
-    return "A senha provisória deve ter pelo menos 6 caracteres.";
+  if (!access?.password || access.password.length < MIN_PASSWORD_LENGTH) {
+    return `A senha provisória deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
   }
   if (!Array.isArray(schedules) || schedules.length === 0) {
     return "Cadastre pelo menos um horário para o laboratório.";
