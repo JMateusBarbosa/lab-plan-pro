@@ -8,6 +8,7 @@ Este documento registra decisões de segurança que devem permanecer verdadeiras
 - operações administrativas sensíveis devem passar por Edge Functions autenticadas;
 - usuários de laboratório nunca devem confiar em um `laboratory_id` vindo do cliente para autorização;
 - RLS deve continuar sendo a barreira principal para isolamento entre laboratórios;
+- privilégios PostgreSQL devem seguir o princípio do menor privilégio e complementar o RLS;
 - `SUPABASE_SERVICE_ROLE_KEY` e demais secret keys nunca podem chegar ao frontend;
 - migrations históricas não devem ser reescritas; correções devem entrar como novas migrations.
 
@@ -39,11 +40,14 @@ A validação final ocorre na Edge Function, portanto não pode ser contornada a
 
 No projeto hosted, revisar em **Authentication > Sign In / Providers / Password security**:
 
-- desativar `Allow new users to sign up`;
-- definir uma política mínima de senha compatível com o produto;
+- manter o provedor de e-mail ativo para permitir login;
+- definir senha mínima de 12 caracteres;
+- manter as proteções de alteração de senha/e-mail compatíveis com o fluxo do produto;
 - ativar `Leaked Password Protection` quando disponível no plano do Supabase.
 
-Mesmo com signup hosted habilitado acidentalmente, o trigger do banco rejeita usuários não provisionados. O toggle hosted deve permanecer desligado como defesa em profundidade.
+No plano Free, `Leaked Password Protection` não está disponível. O warning correspondente do Security Advisor é aceito temporariamente como limitação de plano e deve ser revisto em eventual upgrade.
+
+Mesmo com signup hosted habilitado acidentalmente, o trigger do banco rejeita usuários não provisionados pelo fluxo administrativo autorizado.
 
 ## Laboratórios
 
@@ -55,6 +59,26 @@ Alterações são realizadas por:
 - `set-laboratory-status` para ativação/desativação.
 
 As funções validam que o chamador possui `profiles.role = admin` e utilizam Service Role somente no ambiente server-side.
+
+## Privilégios PostgreSQL
+
+Os papéis usados pelo navegador têm permissões mínimas explícitas:
+
+- `anon`: sem acesso direto às tabelas da aplicação;
+- `authenticated`: `SELECT` em `profiles`, `laboratories` e `laboratory_schedules`;
+- `authenticated`: `SELECT`, `INSERT`, `UPDATE` e `DELETE` em `exams`;
+- mutações administrativas de laboratório/profile não recebem grants de cliente;
+- `service_role` permanece reservado ao backend/Edge Functions.
+
+RLS continua definindo **quais linhas** um usuário autenticado pode acessar. Os grants definem **quais operações** podem sequer chegar às policies. As duas camadas devem permanecer coerentes.
+
+Funções usadas exclusivamente como triggers, como `public.set_updated_at()`, `public.validate_exam_schedule()` e `private.sync_profile_email_from_auth()`, não devem possuir `EXECUTE` para papéis de navegador.
+
+As helpers `private.current_laboratory_id()` e `private.is_admin()` são `SECURITY DEFINER`, usam `search_path = ''`, referências de objeto schema-qualified e `EXECUTE` somente para `authenticated`.
+
+Migrations executadas como `postgres` possuem default privileges restritos. Novas tabelas, sequências e funções **não recebem acesso do navegador automaticamente**; cada migration deve conceder explicitamente apenas os grants necessários.
+
+Evite criar objetos de produção manualmente pelo Table Editor/SQL Editor quando eles fizerem parte da aplicação. Prefira migrations versionadas para manter grants, RLS e histórico reproduzíveis.
 
 ## RLS
 
@@ -82,8 +106,10 @@ Antes de qualquer commit, não inclua:
 ## Checklist antes de produção
 
 - Security Advisor sem alertas críticos ou altos não justificados;
-- signup público desativado no Supabase hosted;
+- qualquer warning de plano documentado e aceito conscientemente;
+- cadastro público bloqueado pelo backend;
 - proteção contra senhas vazadas ativada quando disponível;
+- grants e RLS revisados após qualquer nova tabela ou função;
 - domínio/CORS e headers de segurança revisados;
 - auditoria de ações sensíveis implementada;
 - política de exclusão/retensão de provas definida;
