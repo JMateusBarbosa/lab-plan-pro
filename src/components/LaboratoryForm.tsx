@@ -124,8 +124,8 @@ export function LaboratoryForm({
     if (mode === "create") {
       if (!access.password) {
         nextErrors.password = "Informe a senha provisória.";
-      } else if (access.password.length < 6) {
-        nextErrors.password = "A senha provisória deve ter pelo menos 6 caracteres.";
+      } else if (access.password.length < 12) {
+        nextErrors.password = "A senha provisória deve ter pelo menos 12 caracteres.";
       }
       if (!access.confirmPassword) nextErrors.confirmPassword = "Confirme a senha.";
       if (access.password && access.confirmPassword && access.password !== access.confirmPassword) {
@@ -283,7 +283,10 @@ export function LaboratoryForm({
           </div>
           {mode === "create" ? (
             <>
-              {accessField("password", "Senha provisória", { required: true, type: "password" })}
+              <div>
+                {accessField("password", "Senha provisória", { required: true, type: "password" })}
+                <p className="mt-1 text-xs text-muted-foreground">Use pelo menos 12 caracteres.</p>
+              </div>
               {accessField("confirmPassword", "Confirmar senha", { required: true, type: "password" })}
             </>
           ) : (
