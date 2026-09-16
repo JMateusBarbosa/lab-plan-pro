@@ -1,6 +1,13 @@
 import { supabase } from "@/lib/supabase";
 import type { Exam, ExamFormValues } from "@/types/exam";
 
+type DatabaseError = {
+  message: string;
+  code?: string | null;
+  details?: string | null;
+  hint?: string | null;
+};
+
 function mapExam(row: {
   id: string;
   laboratory_id: string;
@@ -31,18 +38,38 @@ function mapExam(row: {
   };
 }
 
-function translateExamError(message: string) {
-  const normalized = message.toLowerCase();
+function translateExamError(error: DatabaseError) {
+  const combined = [error.message, error.details, error.hint]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 
-  if (normalized.includes("exams_unique_pc_slot") || normalized.includes("duplicate key")) {
+  if (combined.includes("exams_unique_pc_slot")) {
     return "Este computador já está agendado para a mesma data e horário de aula.";
   }
-  if (normalized.includes("pc") && normalized.includes("não existe")) return message;
-  if (normalized.includes("não existe horário ativo")) return message;
-  if (normalized.includes("recuperação") || normalized.includes("prova anterior")) return message;
-  if (normalized.includes("cadeia histórica") || normalized.includes("ciclo")) return message;
 
-  return message;
+  if (combined.includes("exams_single_recovery_child")) {
+    return "Esta tentativa já possui uma recuperação vinculada.";
+  }
+
+  if (error.code === "23503" && combined.includes("exams_previous_exam_id_fkey")) {
+    return "Esta prova possui uma recuperação vinculada e não pode ser excluída.";
+  }
+
+  if (error.code === "42501" || combined.includes("row-level security")) {
+    return "Você não possui permissão para realizar esta operação.";
+  }
+
+  if (combined.includes("pc") && combined.includes("não existe")) return error.message;
+  if (combined.includes("não existe horário ativo")) return error.message;
+  if (combined.includes("recuperação") || combined.includes("prova anterior")) return error.message;
+  if (combined.includes("cadeia histórica") || combined.includes("ciclo")) return error.message;
+
+  if (error.code === "23505") {
+    return "Já existe uma prova conflitante com estes dados.";
+  }
+
+  return error.message;
 }
 
 export async function listLaboratoryExams(): Promise<Exam[]> {
@@ -53,13 +80,13 @@ export async function listLaboratoryExams(): Promise<Exam[]> {
     .order("student_class_time", { ascending: true })
     .order("created_at", { ascending: false });
 
-  if (error) throw new Error(translateExamError(error.message));
+  if (error) throw new Error(translateExamError(error));
   return (data ?? []).map(mapExam);
 }
 
 export async function getLaboratoryExam(id: string): Promise<Exam | null> {
   const { data, error } = await supabase.from("exams").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(translateExamError(error.message));
+  if (error) throw new Error(translateExamError(error));
   return data ? mapExam(data) : null;
 }
 
@@ -80,7 +107,7 @@ export async function createLaboratoryExam(laboratoryId: string, values: ExamFor
     .select("*")
     .single();
 
-  if (error) throw new Error(translateExamError(error.message));
+  if (error) throw new Error(translateExamError(error));
   return mapExam(data);
 }
 
@@ -101,11 +128,11 @@ export async function updateLaboratoryExam(id: string, values: ExamFormValues): 
     .select("*")
     .single();
 
-  if (error) throw new Error(translateExamError(error.message));
+  if (error) throw new Error(translateExamError(error));
   return mapExam(data);
 }
 
 export async function deleteLaboratoryExam(id: string) {
   const { error } = await supabase.from("exams").delete().eq("id", id);
-  if (error) throw new Error(translateExamError(error.message));
+  if (error) throw new Error(translateExamError(error));
 }
