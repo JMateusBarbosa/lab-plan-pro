@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  corsHeadersForRequest,
+  handleCorsPreflight,
+  isOriginAllowed,
+} from "../_shared/cors.ts";
 
 type ScheduleInput = {
   dayOfWeek: number;
@@ -28,19 +33,6 @@ type ProvisionPayload = {
 const MIN_PASSWORD_LENGTH = 12;
 const PASSWORD_POLICY_MESSAGE =
   "A senha provisória deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -123,8 +115,19 @@ function validatePayload(payload: ProvisionPayload) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersForRequest(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return handleCorsPreflight(req);
+  }
+
+  if (!isOriginAllowed(req.headers.get("Origin"))) {
+    return jsonResponse({ error: "Origem não autorizada." }, 403);
   }
 
   if (req.method !== "POST") {
@@ -276,11 +279,14 @@ Deno.serve(async (req) => {
       throw new Error("A conta foi criada, mas o perfil do laboratório não foi provisionado corretamente.");
     }
 
-    return jsonResponse({
-      laboratoryId,
-      userId: authUserId,
-      email: createdProfile.email,
-    }, 201);
+    return jsonResponse(
+      {
+        laboratoryId,
+        userId: authUserId,
+        email: createdProfile.email,
+      },
+      201,
+    );
   } catch (error) {
     await cleanup();
     const message = error instanceof Error ? error.message : "Falha ao cadastrar laboratório.";

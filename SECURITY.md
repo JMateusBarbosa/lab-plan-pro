@@ -91,6 +91,31 @@ As policies devem garantir que:
 
 Qualquer mudança em policies deve ser seguida de testes de isolamento entre dois laboratórios distintos.
 
+## HTTP, CSP e CORS
+
+Respostas SSR de produção aplicam headers de segurança no middleware do TanStack Start:
+
+- `Content-Security-Policy` com nonce criptográfico por requisição;
+- `X-Content-Type-Options: nosniff`;
+- `X-Frame-Options: DENY`;
+- `Referrer-Policy: strict-origin-when-cross-origin`;
+- `Permissions-Policy` desativando recursos que a aplicação não utiliza;
+- `Strict-Transport-Security` em respostas HTTPS.
+
+A CSP deve continuar sem `unsafe-inline` em `script-src`. Scripts SSR/hidratação recebem nonce pelo `router.options.ssr.nonce`. `style-src` ainda permite `unsafe-inline` por compatibilidade com a camada visual atual e deve ser reavaliado caso a arquitetura de estilos mude.
+
+O `connect-src` permite somente a própria origem e o projeto Supabase configurado, incluindo WebSocket do Supabase. `frame-ancestors 'none'` e `X-Frame-Options: DENY` bloqueiam clickjacking.
+
+As Edge Functions administrativas não usam `Access-Control-Allow-Origin: *`. O CORS aceita explicitamente:
+
+- `https://labs-sistema.vercel.app`;
+- origens locais de desenvolvimento conhecidas;
+- origens extras fornecidas por `ALLOWED_ORIGINS` no ambiente server-side.
+
+Uma origem de preview/staging nova deve ser adicionada explicitamente à configuração; não ampliar o CORS com curingas genéricos de domínio.
+
+CORS é apenas uma proteção de navegador e **não substitui autenticação/autorização**. As Edge Functions continuam exigindo JWT válido e validação de `profiles.role = admin`.
+
 ## Segredos
 
 O Git ignora `.env`, `.env.*` e `.dev.vars`. Apenas `.env.example`, sem valores reais, deve ser versionado.
@@ -110,7 +135,8 @@ Antes de qualquer commit, não inclua:
 - cadastro público bloqueado pelo backend;
 - proteção contra senhas vazadas ativada quando disponível;
 - grants e RLS revisados após qualquer nova tabela ou função;
-- domínio/CORS e headers de segurança revisados;
+- CSP e demais headers de segurança confirmados em resposta HTTPS real;
+- CORS das Edge Functions testado com origem autorizada e origem rejeitada;
 - auditoria de ações sensíveis implementada;
 - política de exclusão/retensão de provas definida;
 - migrations e Edge Functions sincronizadas entre Git e Supabase;

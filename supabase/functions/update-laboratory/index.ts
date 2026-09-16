@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  corsHeadersForRequest,
+  handleCorsPreflight,
+  isOriginAllowed,
+} from "../_shared/cors.ts";
 
 type ScheduleInput = {
   dayOfWeek: number;
@@ -24,19 +29,6 @@ type UpdatePayload = {
 
 const BUSINESS_TIME_ZONE = "America/Manaus";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
@@ -58,7 +50,19 @@ function getTodayInBusinessTimeZone() {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeaders = corsHeadersForRequest(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+
+  if (!isOriginAllowed(req.headers.get("Origin"))) {
+    return jsonResponse({ error: "Origem não autorizada." }, 403);
+  }
+
   if (req.method !== "POST") return jsonResponse({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -154,10 +158,13 @@ Deno.serve(async (req) => {
 
   for (const exam of futureExams ?? []) {
     if (exam.pc_number > payload.laboratory.computerCount) {
-      return jsonResponse({
-        error:
-          "A quantidade de computadores não pode ser reduzida porque existem provas de hoje ou futuras agendadas em PCs acima do novo limite.",
-      }, 409);
+      return jsonResponse(
+        {
+          error:
+            "A quantidade de computadores não pode ser reduzida porque existem provas de hoje ou futuras agendadas em PCs acima do novo limite.",
+        },
+        409,
+      );
     }
 
     const examDay = dayOfWeekFromDate(exam.exam_date);
@@ -170,24 +177,30 @@ Deno.serve(async (req) => {
     );
 
     if (!remainsValid) {
-      return jsonResponse({
-        error:
-          "Os horários não podem ser alterados dessa forma porque existem provas de hoje ou futuras usando um horário que seria removido ou desativado.",
-      }, 409);
+      return jsonResponse(
+        {
+          error:
+            "Os horários não podem ser alterados dessa forma porque existem provas de hoje ou futuras usando um horário que seria removido ou desativado.",
+        },
+        409,
+      );
     }
   }
 
   const restore = async () => {
-    await service.from("laboratories").update({
-      name: oldLaboratory.name,
-      school_name: oldLaboratory.school_name,
-      responsible: oldLaboratory.responsible,
-      phone: oldLaboratory.phone,
-      city: oldLaboratory.city,
-      state: oldLaboratory.state,
-      status: oldLaboratory.status,
-      computer_count: oldLaboratory.computer_count,
-    }).eq("id", payload.laboratoryId);
+    await service
+      .from("laboratories")
+      .update({
+        name: oldLaboratory.name,
+        school_name: oldLaboratory.school_name,
+        responsible: oldLaboratory.responsible,
+        phone: oldLaboratory.phone,
+        city: oldLaboratory.city,
+        state: oldLaboratory.state,
+        status: oldLaboratory.status,
+        computer_count: oldLaboratory.computer_count,
+      })
+      .eq("id", payload.laboratoryId);
 
     await service.from("laboratory_schedules").delete().eq("laboratory_id", payload.laboratoryId);
     if (oldSchedules?.length) {
@@ -198,16 +211,19 @@ Deno.serve(async (req) => {
   };
 
   try {
-    const { error: updateError } = await service.from("laboratories").update({
-      name: payload.laboratory.name.trim(),
-      school_name: payload.laboratory.schoolName.trim(),
-      responsible: payload.laboratory.responsible?.trim() || null,
-      phone: payload.laboratory.phone?.trim() || null,
-      city: payload.laboratory.city.trim(),
-      state: payload.laboratory.state.trim(),
-      status: payload.laboratory.status,
-      computer_count: payload.laboratory.computerCount,
-    }).eq("id", payload.laboratoryId);
+    const { error: updateError } = await service
+      .from("laboratories")
+      .update({
+        name: payload.laboratory.name.trim(),
+        school_name: payload.laboratory.schoolName.trim(),
+        responsible: payload.laboratory.responsible?.trim() || null,
+        phone: payload.laboratory.phone?.trim() || null,
+        city: payload.laboratory.city.trim(),
+        state: payload.laboratory.state.trim(),
+        status: payload.laboratory.status,
+        computer_count: payload.laboratory.computerCount,
+      })
+      .eq("id", payload.laboratoryId);
     if (updateError) throw new Error(updateError.message);
 
     const { error: deleteError } = await service

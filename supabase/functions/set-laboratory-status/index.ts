@@ -1,25 +1,29 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  corsHeadersForRequest,
+  handleCorsPreflight,
+  isOriginAllowed,
+} from "../_shared/cors.ts";
 
 type StatusPayload = {
   laboratoryId: string;
   status: "ativo" | "inativo";
 };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeaders = corsHeadersForRequest(req);
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  if (req.method === "OPTIONS") return handleCorsPreflight(req);
+
+  if (!isOriginAllowed(req.headers.get("Origin"))) {
+    return jsonResponse({ error: "Origem não autorizada." }, 403);
+  }
+
   if (req.method !== "POST") return jsonResponse({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
