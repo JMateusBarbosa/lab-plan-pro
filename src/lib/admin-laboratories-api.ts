@@ -110,12 +110,11 @@ async function throwFunctionError(error: unknown, fallback: string): Promise<nev
   if (error && typeof error === "object" && "context" in error) {
     const context = (error as { context?: unknown }).context;
 
-    if (context && typeof context === "object" && "clone" in context) {
-      const response = context as Response;
-      responseStatus = typeof response.status === "number" ? response.status : null;
+    if (context instanceof Response) {
+      responseStatus = context.status;
 
       try {
-        const payload = (await response.clone().json()) as unknown;
+        const payload = (await context.clone().json()) as unknown;
         const message = getMessageFromFunctionPayload(payload);
         if (message) throw new Error(message);
       } catch (parseError) {
@@ -125,7 +124,7 @@ async function throwFunctionError(error: unknown, fallback: string): Promise<nev
       }
 
       try {
-        const text = (await response.clone().text()).trim();
+        const text = (await context.clone().text()).trim();
         if (text) throw new Error(text);
       } catch (readError) {
         if (readError instanceof Error && readError.message && readError.message !== "Body is unusable") {
@@ -233,7 +232,9 @@ export async function provisionLaboratory(
 ) {
   if (!access.password) throw new Error("Informe a senha provisória.");
 
+  const idempotencyKey = crypto.randomUUID();
   const { data, error } = await supabase.functions.invoke("provision-laboratory", {
+    headers: { "x-idempotency-key": idempotencyKey },
     body: {
       laboratory: {
         name: values.name,
