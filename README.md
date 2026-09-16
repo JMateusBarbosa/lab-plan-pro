@@ -4,14 +4,16 @@ Sistema web para gerenciamento de laboratórios e agendamento de provas, com ár
 
 ## Estado atual
 
-O projeto já utiliza backend real com Supabase. A Área Administrativa e a Área do Laboratório trabalham com autenticação, banco PostgreSQL e Row Level Security (RLS).
+O projeto utiliza backend real com Supabase. A Área Administrativa e a Área do Laboratório trabalham com autenticação, banco PostgreSQL, Edge Functions e Row Level Security (RLS).
 
 ### Área Administrativa
 
 - autenticação real com Supabase Auth;
-- bootstrap controlado do primeiro administrador;
+- cadastro público de administradores desativado;
+- novos usuários só podem ser provisionados por fluxos server-side autorizados;
 - cadastro de laboratórios com criação de conta Auth e profile;
 - listagem, detalhes, edição e ativação/desativação de laboratórios;
+- alterações de laboratório passam por Edge Functions administrativas;
 - configuração de quantidade de computadores e horários;
 - dashboard com dados reais;
 - React Query para cache e invalidação.
@@ -50,7 +52,7 @@ Tabelas principais:
 - `laboratory_schedules`
 - `exams`
 
-As tabelas públicas usam RLS. Usuários de laboratório só conseguem acessar dados vinculados ao próprio `laboratory_id`, enquanto o administrador possui as permissões necessárias para gerenciamento dos laboratórios.
+As tabelas públicas usam RLS. Usuários de laboratório só conseguem acessar dados vinculados ao próprio `laboratory_id`. Mutações administrativas sensíveis não devem ser realizadas diretamente pelo navegador quando existe uma Edge Function responsável pela operação.
 
 As migrations ficam em `supabase/migrations/` e as Edge Functions em `supabase/functions/`.
 
@@ -58,6 +60,7 @@ Edge Functions atuais:
 
 - `provision-laboratory`
 - `update-laboratory`
+- `set-laboratory-status`
 
 ## Variáveis de ambiente
 
@@ -66,7 +69,16 @@ VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 ```
 
-Nunca coloque `SUPABASE_SERVICE_ROLE_KEY` no frontend. A service role é usada somente em operações server-side/Edge Functions.
+Nunca coloque `SUPABASE_SERVICE_ROLE_KEY`, secret keys ou senhas no frontend. Arquivos `.env` são ignorados pelo Git; somente `.env.example` deve ser versionado.
+
+## Segurança de autenticação
+
+- cadastro público de usuários não faz parte do produto;
+- o trigger de `auth.users` rejeita usuários que não tenham sido provisionados por um fluxo administrativo autorizado;
+- o primeiro administrador não é mais criado por uma tela pública;
+- novas contas de laboratório exigem senha provisória forte com pelo menos 12 caracteres, incluindo maiúscula, minúscula, número e símbolo;
+- a criação/recuperação de administradores deve ser feita somente por procedimento interno com acesso administrativo ao projeto;
+- configurações hosted do Supabase Auth, como proteção contra senhas vazadas, devem ser revisadas antes de produção. Consulte também `SECURITY.md`.
 
 ## Desenvolvimento local
 
