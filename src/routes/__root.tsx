@@ -11,10 +11,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { LaboratoriesProvider } from "../lib/laboratories-store";
-import { LaboratoryAccessProvider } from "../lib/laboratory-access-store";
-import { LaboratorySchedulesProvider } from "../lib/laboratory-schedules-store";
-import { ExamsProvider } from "../lib/exams-store";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -125,16 +121,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LaboratoriesProvider>
-        <LaboratoryAccessProvider>
-          <LaboratorySchedulesProvider>
-            <ExamsProvider>
-              <Outlet />
-              <Toaster />
-            </ExamsProvider>
-          </LaboratorySchedulesProvider>
-        </LaboratoryAccessProvider>
-      </LaboratoriesProvider>
+      <Outlet />
+      <Toaster />
     </QueryClientProvider>
   );
 }
