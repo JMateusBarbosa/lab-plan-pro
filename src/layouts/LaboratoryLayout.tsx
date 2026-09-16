@@ -1,9 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, ClipboardList, CalendarPlus, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useCurrentLaboratory } from "@/lib/laboratories-store";
+import {
+  useLaboratorySessionActions,
+  useLaboratorySessionQuery,
+} from "@/lib/laboratory-session-queries";
 
 const navItems = [
   { label: "Dashboard", to: "/laboratorio", icon: LayoutDashboard, exact: true },
@@ -14,6 +17,20 @@ const navItems = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { clearSession } = useLaboratorySessionActions();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    onNavigate?.();
+    try {
+      await clearSession();
+    } finally {
+      navigate({ to: "/laboratorio/login" });
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <nav className="flex h-full flex-col gap-1 p-3">
@@ -40,21 +57,49 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <Button
         variant="ghost"
         className="mt-auto justify-start gap-2 text-muted-foreground"
-        onClick={() => {
-          onNavigate?.();
-          navigate({ to: "/laboratorio/login" });
-        }}
+        disabled={loggingOut}
+        onClick={() => void handleLogout()}
       >
         <LogOut className="h-4 w-4" />
-        Sair
+        {loggingOut ? "Saindo..." : "Sair"}
       </Button>
     </nav>
   );
 }
 
 export function LaboratoryLayout({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const lab = useCurrentLaboratory();
+  const { data: session, isLoading, isError } = useLaboratorySessionQuery();
+  const { clearSession } = useLaboratorySessionActions();
+
+  useEffect(() => {
+    if (!isError) return;
+
+    let active = true;
+    const leave = async () => {
+      try {
+        await clearSession();
+      } finally {
+        if (active) navigate({ to: "/laboratorio/login" });
+      }
+    };
+
+    void leave();
+    return () => {
+      active = false;
+    };
+  }, [clearSession, isError, navigate]);
+
+  if (isLoading || !session) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+        <p className="text-sm text-muted-foreground">
+          {isError ? "Redirecionando para o login..." : "Verificando acesso..."}
+        </p>
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -71,13 +116,13 @@ export function LaboratoryLayout({ children }: { children: ReactNode }) {
         <Link to="/laboratorio" className="truncate text-sm font-semibold sm:text-base">
           Sistema de Agendamento de Provas
         </Link>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="hidden truncate text-sm text-muted-foreground sm:inline">
-            {lab?.schoolName ?? "Laboratório"}
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <span className="hidden max-w-64 truncate text-sm text-muted-foreground sm:inline">
+            {session.laboratory.schoolName}
           </span>
           <div
             aria-hidden
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium"
           >
             LB
           </div>
