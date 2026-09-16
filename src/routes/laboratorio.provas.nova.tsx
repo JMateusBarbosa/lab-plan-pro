@@ -2,9 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
 import { ExamForm } from "@/components/ExamForm";
-import { useCurrentLaboratory, CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
-import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
-import { useExams } from "@/lib/exams-store";
+import { Button } from "@/components/ui/button";
+import { useLaboratorySessionQuery } from "@/lib/laboratory-session-queries";
+import {
+  useCreateLaboratoryExamMutation,
+  useLaboratoryExamsQuery,
+} from "@/lib/laboratory-exams-queries";
 
 export const Route = createFileRoute("/laboratorio/provas/nova")({
   head: () => ({
@@ -18,17 +21,35 @@ export const Route = createFileRoute("/laboratorio/provas/nova")({
 
 function NovaProva() {
   const navigate = useNavigate();
-  const lab = useCurrentLaboratory();
-  const { listByLaboratory: listSchedules } = useLaboratorySchedules();
-  const { create, listByLaboratory } = useExams();
+  const { data: session } = useLaboratorySessionQuery();
+  const { data: exams = [], isLoading: loadingExams, isError, refetch } = useLaboratoryExamsQuery();
+  const createExam = useCreateLaboratoryExamMutation(session?.laboratory.id ?? "");
 
-  if (!lab) {
-    return <LaboratoryLayout><p className="text-sm text-muted-foreground">Laboratório não encontrado.</p></LaboratoryLayout>;
+  if (!session) {
+    return <LaboratoryLayout><p className="text-sm text-muted-foreground">Carregando laboratório...</p></LaboratoryLayout>;
   }
 
-  const exams = listByLaboratory(CURRENT_LABORATORY_ID);
-  const schedules = listSchedules(CURRENT_LABORATORY_ID);
-  const previousExamOptions = exams.filter((exam) => exam.status === "reprovado");
+  if (loadingExams) {
+    return <LaboratoryLayout><p className="text-sm text-muted-foreground">Carregando dados das provas...</p></LaboratoryLayout>;
+  }
+
+  if (isError) {
+    return (
+      <LaboratoryLayout>
+        <div className="space-y-3">
+          <p className="text-sm text-destructive">Não foi possível carregar os dados necessários para o agendamento.</p>
+          <Button variant="outline" onClick={() => void refetch()}>Tentar novamente</Button>
+        </div>
+      </LaboratoryLayout>
+    );
+  }
+
+  const examsWithRecovery = new Set(
+    exams.map((exam) => exam.previousExamId).filter((id): id is string => Boolean(id)),
+  );
+  const previousExamOptions = exams.filter(
+    (exam) => exam.status === "reprovado" && !examsWithRecovery.has(exam.id),
+  );
 
   return (
     <LaboratoryLayout>
@@ -36,11 +57,14 @@ function NovaProva() {
         <h1 className="text-xl font-semibold sm:text-2xl">Agendar prova</h1>
         <ExamForm
           mode="create"
-          laboratory={lab}
-          schedules={schedules}
+          laboratory={session.laboratory}
+          schedules={session.schedules}
           previousExamOptions={previousExamOptions}
+          submitting={createExam.isPending}
           onCancel={() => navigate({ to: "/laboratorio/provas" })}
-          onSubmit={(values) => {
+          onSubmit={async (values) => {
+            if (createExam.isPending) return;
+
             const hasConflict = exams.some(
               (exam) =>
                 exam.examDate === values.examDate &&
@@ -53,9 +77,13 @@ function NovaProva() {
               return;
             }
 
-            create(CURRENT_LABORATORY_ID, { ...values, status: "pendente" });
-            toast.success("Prova agendada com sucesso.");
-            navigate({ to: "/laboratorio/provas" });
+            try {
+              await createExam.mutateAsync(values);
+              toast.success("Prova agendada com sucesso.");
+              navigate({ to: "/laboratorio/provas" });
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Não foi possível agendar a prova.");
+            }
           }}
         />
       </div>

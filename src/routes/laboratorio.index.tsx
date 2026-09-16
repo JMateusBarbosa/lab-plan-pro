@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCurrentLaboratory, CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
-import { useExams } from "@/lib/exams-store";
+import { useLaboratorySessionQuery } from "@/lib/laboratory-session-queries";
+import { useLaboratoryExamsQuery } from "@/lib/laboratory-exams-queries";
 import { getLocalDateString } from "@/lib/date";
 import { examTypeLabels } from "@/types/exam";
 
@@ -28,9 +28,8 @@ export const Route = createFileRoute("/laboratorio/")({
 });
 
 function LaboratorioDashboard() {
-  const lab = useCurrentLaboratory();
-  const { listByLaboratory } = useExams();
-  const exams = listByLaboratory(CURRENT_LABORATORY_ID);
+  const { data: session } = useLaboratorySessionQuery();
+  const { data: exams = [], isLoading, isError, refetch } = useLaboratoryExamsQuery();
   const today = getLocalDateString();
   const examsToday = exams.filter((exam) => exam.examDate === today);
 
@@ -40,53 +39,65 @@ function LaboratorioDashboard() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold sm:text-2xl">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">{lab?.schoolName}</p>
+            <p className="text-sm text-muted-foreground">{session?.laboratory.schoolName}</p>
           </div>
           <Button asChild><Link to="/laboratorio/provas/nova">Agendar nova prova</Link></Button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardCard title="Provas de hoje" value={examsToday.length} />
-          <DashboardCard title="Pendentes" value={exams.filter((exam) => exam.status === "pendente").length} />
-          <DashboardCard title="Aprovadas" value={exams.filter((exam) => exam.status === "aprovado").length} />
-          <DashboardCard title="Reprovadas" value={exams.filter((exam) => exam.status === "reprovado").length} />
-        </div>
+        {isLoading ? <p className="text-sm text-muted-foreground">Carregando provas...</p> : null}
+        {isError ? (
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-destructive">Não foi possível carregar as provas.</p>
+            <Button size="sm" variant="outline" onClick={() => void refetch()}>Tentar novamente</Button>
+          </div>
+        ) : null}
 
-        <Card>
-          <CardHeader><CardTitle className="text-base">Provas de hoje</CardTitle></CardHeader>
-          <CardContent>
-            {examsToday.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma prova agendada para hoje.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Aluno</TableHead>
-                      <TableHead>Módulo</TableHead>
-                      <TableHead>Horário da aula</TableHead>
-                      <TableHead>PC</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {examsToday.map((exam) => (
-                      <TableRow key={exam.id}>
-                        <TableCell>{exam.studentName}</TableCell>
-                        <TableCell>{exam.module}</TableCell>
-                        <TableCell>{exam.studentClassTime}</TableCell>
-                        <TableCell>PC {exam.pcNumber}</TableCell>
-                        <TableCell>{examTypeLabels[exam.examType]}</TableCell>
-                        <TableCell><ExamStatusBadge status={exam.status} /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {!isLoading && !isError ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <DashboardCard title="Provas de hoje" value={examsToday.length} />
+              <DashboardCard title="Pendentes" value={exams.filter((exam) => exam.status === "pendente").length} />
+              <DashboardCard title="Aprovadas" value={exams.filter((exam) => exam.status === "aprovado").length} />
+              <DashboardCard title="Reprovadas" value={exams.filter((exam) => exam.status === "reprovado").length} />
+            </div>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">Provas de hoje</CardTitle></CardHeader>
+              <CardContent>
+                {examsToday.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma prova agendada para hoje.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Aluno</TableHead>
+                          <TableHead>Módulo</TableHead>
+                          <TableHead>Horário da aula</TableHead>
+                          <TableHead>PC</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {examsToday.map((exam) => (
+                          <TableRow key={exam.id}>
+                            <TableCell>{exam.studentName}</TableCell>
+                            <TableCell>{exam.module}</TableCell>
+                            <TableCell>{exam.studentClassTime}</TableCell>
+                            <TableCell>PC {exam.pcNumber}</TableCell>
+                            <TableCell>{examTypeLabels[exam.examType]}</TableCell>
+                            <TableCell><ExamStatusBadge status={exam.status} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
       </div>
     </LaboratoryLayout>
   );

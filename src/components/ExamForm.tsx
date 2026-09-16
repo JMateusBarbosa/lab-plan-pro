@@ -21,7 +21,8 @@ interface ExamFormProps {
   schedules: LaboratorySchedule[];
   previousExamOptions: Exam[];
   initialValues?: Partial<ExamFormValues>;
-  onSubmit: (values: ExamFormValues) => void;
+  submitting?: boolean;
+  onSubmit: (values: ExamFormValues) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -42,6 +43,7 @@ export function ExamForm({
   schedules,
   previousExamOptions,
   initialValues,
+  submitting = false,
   onSubmit,
   onCancel,
 }: ExamFormProps) {
@@ -83,6 +85,8 @@ export function ExamForm({
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
+
     const nextErrors: Record<string, string> = {};
     if (!values.studentName.trim()) nextErrors.studentName = "Informe o nome do aluno.";
     if (!values.module.trim()) nextErrors.module = "Informe o módulo.";
@@ -94,7 +98,7 @@ export function ExamForm({
     }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
-    onSubmit(values);
+    void onSubmit(values);
   };
 
   return (
@@ -104,25 +108,25 @@ export function ExamForm({
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="studentName">Nome do aluno *</Label>
-            <Input id="studentName" value={values.studentName} onChange={(e) => setValues((p) => ({ ...p, studentName: e.target.value }))} />
+            <Input id="studentName" disabled={submitting} value={values.studentName} onChange={(e) => setValues((p) => ({ ...p, studentName: e.target.value }))} />
             {errors.studentName ? <p className="text-xs text-destructive">{errors.studentName}</p> : null}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="module">Módulo *</Label>
-            <Input id="module" value={values.module} onChange={(e) => setValues((p) => ({ ...p, module: e.target.value }))} />
+            <Input id="module" disabled={submitting} value={values.module} onChange={(e) => setValues((p) => ({ ...p, module: e.target.value }))} />
             {errors.module ? <p className="text-xs text-destructive">{errors.module}</p> : null}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="examDate">Data da prova *</Label>
-            <Input id="examDate" type="date" value={values.examDate} onChange={(e) => handleDateChange(e.target.value)} />
+            <Input id="examDate" disabled={submitting} type="date" value={values.examDate} onChange={(e) => handleDateChange(e.target.value)} />
             {errors.examDate ? <p className="text-xs text-destructive">{errors.examDate}</p> : null}
           </div>
 
           <div className="space-y-1.5">
             <Label>Horário da aula *</Label>
-            <Select value={values.studentClassTime} onValueChange={(v) => setValues((p) => ({ ...p, studentClassTime: v }))}>
+            <Select disabled={submitting} value={values.studentClassTime} onValueChange={(v) => setValues((p) => ({ ...p, studentClassTime: v }))}>
               <SelectTrigger><SelectValue placeholder="Selecione o horário" /></SelectTrigger>
               <SelectContent>
                 {availableSchedules.map((schedule) => (
@@ -140,7 +144,7 @@ export function ExamForm({
 
           <div className="space-y-1.5">
             <Label>Computador *</Label>
-            <Select value={values.pcNumber ? String(values.pcNumber) : ""} onValueChange={(v) => setValues((p) => ({ ...p, pcNumber: Number(v) }))}>
+            <Select disabled={submitting} value={values.pcNumber ? String(values.pcNumber) : ""} onValueChange={(v) => setValues((p) => ({ ...p, pcNumber: Number(v) }))}>
               <SelectTrigger><SelectValue placeholder="Selecione o computador" /></SelectTrigger>
               <SelectContent>
                 {computers.map((pc) => <SelectItem key={pc} value={String(pc)}>PC {pc}</SelectItem>)}
@@ -151,7 +155,7 @@ export function ExamForm({
 
           <div className="space-y-1.5">
             <Label>Tipo da prova *</Label>
-            <Select value={values.examType} onValueChange={(v) => handleTypeChange(v as ExamFormValues["examType"])}>
+            <Select disabled={submitting} value={values.examType} onValueChange={(v) => handleTypeChange(v as ExamFormValues["examType"])}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(Object.keys(examTypeLabels) as Array<keyof typeof examTypeLabels>).map((type) => (
@@ -165,6 +169,7 @@ export function ExamForm({
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Prova anterior *</Label>
               <Select
+                disabled={submitting}
                 value={values.previousExamId ?? ""}
                 onValueChange={(value) => {
                   const previous = previousExamOptions.find((exam) => exam.id === value);
@@ -192,7 +197,7 @@ export function ExamForm({
           {mode === "edit" ? (
             <div className="space-y-1.5">
               <Label>Status *</Label>
-              <Select value={values.status} onValueChange={(v) => setValues((p) => ({ ...p, status: v as ExamFormValues["status"] }))}>
+              <Select disabled={submitting} value={values.status} onValueChange={(v) => setValues((p) => ({ ...p, status: v as ExamFormValues["status"] }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(Object.keys(examStatusLabels) as Array<keyof typeof examStatusLabels>).map((status) => (
@@ -206,8 +211,12 @@ export function ExamForm({
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit">{mode === "create" ? "Agendar prova" : "Salvar alterações"}</Button>
+        <Button type="button" variant="outline" disabled={submitting} onClick={onCancel}>Cancelar</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting
+            ? mode === "create" ? "Agendando..." : "Salvando..."
+            : mode === "create" ? "Agendar prova" : "Salvar alterações"}
+        </Button>
       </div>
     </form>
   );

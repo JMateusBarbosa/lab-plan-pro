@@ -6,8 +6,11 @@ import { ExamStatusBadge } from "@/components/ExamStatusBadge";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useExams } from "@/lib/exams-store";
-import { CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
+import {
+  useDeleteLaboratoryExamMutation,
+  useLaboratoryExamQuery,
+  useLaboratoryExamsQuery,
+} from "@/lib/laboratory-exams-queries";
 import { examTypeLabels } from "@/types/exam";
 
 export const Route = createFileRoute("/laboratorio/provas/$id/")({
@@ -32,11 +35,27 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
 function DetalhesProva() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { getById, remove } = useExams();
+  const { data: exam, isLoading, isError, refetch } = useLaboratoryExamQuery(id);
+  const { data: exams = [] } = useLaboratoryExamsQuery();
+  const deleteExam = useDeleteLaboratoryExamMutation();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const exam = getById(id);
 
-  if (!exam || exam.laboratoryId !== CURRENT_LABORATORY_ID) {
+  if (isLoading) {
+    return <LaboratoryLayout><p className="text-sm text-muted-foreground">Carregando prova...</p></LaboratoryLayout>;
+  }
+
+  if (isError) {
+    return (
+      <LaboratoryLayout>
+        <div className="space-y-3">
+          <p className="text-sm text-destructive">Não foi possível carregar a prova.</p>
+          <Button variant="outline" onClick={() => void refetch()}>Tentar novamente</Button>
+        </div>
+      </LaboratoryLayout>
+    );
+  }
+
+  if (!exam) {
     return (
       <LaboratoryLayout>
         <div className="space-y-4">
@@ -47,7 +66,21 @@ function DetalhesProva() {
     );
   }
 
-  const previousExam = exam.previousExamId ? getById(exam.previousExamId) : undefined;
+  const previousExam = exam.previousExamId
+    ? exams.find((candidate) => candidate.id === exam.previousExamId)
+    : undefined;
+
+  const handleDelete = async () => {
+    if (deleteExam.isPending) return;
+
+    try {
+      await deleteExam.mutateAsync(exam.id);
+      toast.success("Prova excluída com sucesso.");
+      navigate({ to: "/laboratorio/provas" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir a prova.");
+    }
+  };
 
   return (
     <LaboratoryLayout>
@@ -59,7 +92,7 @@ function DetalhesProva() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar</Link></Button>
-            <Button variant="destructive" onClick={() => setConfirmOpen(true)}>Excluir</Button>
+            <Button variant="destructive" disabled={deleteExam.isPending} onClick={() => setConfirmOpen(true)}>Excluir</Button>
             <Button variant="ghost" onClick={() => navigate({ to: "/laboratorio/provas" })}>Voltar</Button>
           </div>
         </div>
@@ -75,7 +108,7 @@ function DetalhesProva() {
               <Info label="Computador" value={`PC ${exam.pcNumber}`} />
               <Info label="Tipo" value={examTypeLabels[exam.examType]} />
               <Info label="Status" value={<ExamStatusBadge status={exam.status} />} />
-              <Info label="Data do cadastro" value={exam.createdAt} />
+              <Info label="Data do cadastro" value={new Date(exam.createdAt).toLocaleString("pt-BR")} />
             </dl>
           </CardContent>
         </Card>
@@ -102,15 +135,11 @@ function DetalhesProva() {
 
       <ConfirmationDialog
         open={confirmOpen}
-        onOpenChange={setConfirmOpen}
+        onOpenChange={(open) => !deleteExam.isPending && setConfirmOpen(open)}
         title="Excluir prova"
         description={`A prova de ${exam.studentName} será removida.`}
-        confirmLabel="Excluir"
-        onConfirm={() => {
-          remove(exam.id);
-          toast.success("Prova excluída com sucesso.");
-          navigate({ to: "/laboratorio/provas" });
-        }}
+        confirmLabel={deleteExam.isPending ? "Excluindo..." : "Excluir"}
+        onConfirm={() => void handleDelete()}
       />
     </LaboratoryLayout>
   );

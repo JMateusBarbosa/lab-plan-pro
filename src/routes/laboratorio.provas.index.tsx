@@ -24,9 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCurrentLaboratory, CURRENT_LABORATORY_ID } from "@/lib/laboratories-store";
-import { useLaboratorySchedules } from "@/lib/laboratory-schedules-store";
-import { useExams } from "@/lib/exams-store";
+import { useLaboratorySessionQuery } from "@/lib/laboratory-session-queries";
+import {
+  useDeleteLaboratoryExamMutation,
+  useLaboratoryExamsQuery,
+} from "@/lib/laboratory-exams-queries";
 import { getLocalDateString } from "@/lib/date";
 import { buildComputerList } from "@/types/laboratory";
 import { examTypeLabels, type Exam } from "@/types/exam";
@@ -44,11 +46,9 @@ export const Route = createFileRoute("/laboratorio/provas/")({
 const ALL = "todos";
 
 function ProvasLista() {
-  const lab = useCurrentLaboratory();
-  const { listByLaboratory, remove } = useExams();
-  const { listByLaboratory: listSchedules } = useLaboratorySchedules();
-  const exams = listByLaboratory(CURRENT_LABORATORY_ID);
-  const schedules = listSchedules(CURRENT_LABORATORY_ID);
+  const { data: session } = useLaboratorySessionQuery();
+  const { data: exams = [], isLoading, isError, refetch } = useLaboratoryExamsQuery();
+  const deleteExam = useDeleteLaboratoryExamMutation();
 
   const [student, setStudent] = useState("");
   const [module, setModule] = useState("");
@@ -59,8 +59,10 @@ function ProvasLista() {
   const [status, setStatus] = useState(ALL);
   const [toDelete, setToDelete] = useState<Exam | null>(null);
 
-  const computers = buildComputerList(lab?.computerCount ?? 0);
-  const times = Array.from(new Set(schedules.filter((schedule) => schedule.active).map((schedule) => schedule.startTime))).sort();
+  const computers = buildComputerList(session?.laboratory.computerCount ?? 0);
+  const times = Array.from(
+    new Set((session?.schedules ?? []).filter((schedule) => schedule.active).map((schedule) => schedule.startTime)),
+  ).sort();
 
   const filtered = useMemo(
     () =>
@@ -85,6 +87,18 @@ function ProvasLista() {
     setTime(ALL);
     setType(ALL);
     setStatus(ALL);
+  };
+
+  const confirmDelete = async () => {
+    if (!toDelete || deleteExam.isPending) return;
+
+    try {
+      await deleteExam.mutateAsync(toDelete.id);
+      toast.success("Prova excluída com sucesso.");
+      setToDelete(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir a prova.");
+    }
   };
 
   return (
@@ -156,9 +170,19 @@ function ProvasLista() {
           </CardContent>
         </Card>
 
-        {filtered.length === 0 ? (
+        {isLoading ? <p className="text-sm text-muted-foreground">Carregando provas...</p> : null}
+        {isError ? (
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-destructive">Não foi possível carregar as provas.</p>
+            <Button size="sm" variant="outline" onClick={() => void refetch()}>Tentar novamente</Button>
+          </div>
+        ) : null}
+
+        {!isLoading && !isError && filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma prova encontrada.</p>
-        ) : (
+        ) : null}
+
+        {!isLoading && !isError && filtered.length > 0 ? (
           <>
             <div className="hidden overflow-x-auto rounded-md border bg-background md:block">
               <Table>
@@ -188,7 +212,7 @@ function ProvasLista() {
                         <div className="flex justify-end gap-2">
                           <Button asChild size="sm" variant="outline"><Link to="/laboratorio/provas/$id" params={{ id: exam.id }}>Ver</Link></Button>
                           <Button asChild size="sm" variant="outline"><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar</Link></Button>
-                          <Button size="sm" variant="destructive" onClick={() => setToDelete(exam)}>Excluir</Button>
+                          <Button size="sm" variant="destructive" disabled={deleteExam.isPending} onClick={() => setToDelete(exam)}>Excluir</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -201,22 +225,16 @@ function ProvasLista() {
               {filtered.map((exam) => <ExamCard key={exam.id} exam={exam} onDelete={setToDelete} />)}
             </div>
           </>
-        )}
+        ) : null}
       </div>
 
       <ConfirmationDialog
         open={toDelete !== null}
-        onOpenChange={(open) => !open && setToDelete(null)}
+        onOpenChange={(open) => !open && !deleteExam.isPending && setToDelete(null)}
         title="Excluir prova"
         description={toDelete ? `A prova de ${toDelete.studentName} será removida.` : undefined}
-        confirmLabel="Excluir"
-        onConfirm={() => {
-          if (toDelete) {
-            remove(toDelete.id);
-            toast.success("Prova excluída com sucesso.");
-          }
-          setToDelete(null);
-        }}
+        confirmLabel={deleteExam.isPending ? "Excluindo..." : "Excluir"}
+        onConfirm={() => void confirmDelete()}
       />
     </LaboratoryLayout>
   );

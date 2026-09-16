@@ -1,9 +1,15 @@
 import { useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { signInLaboratory } from "@/lib/laboratory-session-api";
+import {
+  laboratoryQueryRootKey,
+  laboratorySessionKey,
+} from "@/lib/laboratory-session-queries";
 
 export const Route = createFileRoute("/laboratorio/login")({
   head: () => ({
@@ -22,18 +28,33 @@ export const Route = createFileRoute("/laboratorio/login")({
 
 function LaboratorioLogin() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (loading) return;
+
+    setError("");
     if (!email.trim() || !password.trim()) {
       setError("Preencha e-mail e senha.");
       return;
     }
-    // Login simulado — autenticação real será implementada futuramente.
-    navigate({ to: "/laboratorio" });
+
+    setLoading(true);
+    try {
+      const session = await signInLaboratory(email, password);
+      queryClient.removeQueries({ queryKey: laboratoryQueryRootKey });
+      queryClient.setQueryData(laboratorySessionKey, session);
+      navigate({ to: "/laboratorio" });
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Não foi possível entrar.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,7 +71,9 @@ function LaboratorioLogin() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 value={email}
+                disabled={loading}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
@@ -59,13 +82,15 @@ function LaboratorioLogin() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
+                disabled={loading}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
-            <Button type="submit" className="w-full">
-              Entrar
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
             <Button asChild variant="outline" className="w-full">
               <Link to="/">Voltar</Link>
