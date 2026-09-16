@@ -291,7 +291,13 @@ export async function updateLaboratory(
 
 export async function toggleLaboratoryStatus(id: string, currentStatus: Laboratory["status"]) {
   const nextStatus = currentStatus === "ativo" ? "inativo" : "ativo";
-  const { error } = await supabase.from("laboratories").update({ status: nextStatus }).eq("id", id);
-  if (error) throw error;
+  const { data, error } = await supabase.functions.invoke("set-laboratory-status", {
+    body: { laboratoryId: id, status: nextStatus },
+  });
+
+  if (error) {
+    await throwFunctionError(error, "Não foi possível alterar o status do laboratório.");
+  }
+  if (data?.error) throw new Error(data.error);
   return nextStatus;
 }
