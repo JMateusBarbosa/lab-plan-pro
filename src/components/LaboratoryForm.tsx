@@ -38,6 +38,19 @@ interface LaboratoryFormProps {
   onResetPassword?: () => void;
 }
 
+const PASSWORD_POLICY_MESSAGE =
+  "A senha provisória deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
+
+function hasStrongPassword(password: string) {
+  return (
+    password.length >= 12 &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
 const emptyValues: LaboratoryFormValues = {
   name: "",
   schoolName: "",
@@ -124,8 +137,8 @@ export function LaboratoryForm({
     if (mode === "create") {
       if (!access.password) {
         nextErrors.password = "Informe a senha provisória.";
-      } else if (access.password.length < 12) {
-        nextErrors.password = "A senha provisória deve ter pelo menos 12 caracteres.";
+      } else if (!hasStrongPassword(access.password)) {
+        nextErrors.password = PASSWORD_POLICY_MESSAGE;
       }
       if (!access.confirmPassword) nextErrors.confirmPassword = "Confirme a senha.";
       if (access.password && access.confirmPassword && access.password !== access.confirmPassword) {
@@ -285,7 +298,9 @@ export function LaboratoryForm({
             <>
               <div>
                 {accessField("password", "Senha provisória", { required: true, type: "password" })}
-                <p className="mt-1 text-xs text-muted-foreground">Use pelo menos 12 caracteres.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Use 12 ou mais caracteres, com maiúscula, minúscula, número e símbolo.
+                </p>
               </div>
               {accessField("confirmPassword", "Confirmar senha", { required: true, type: "password" })}
             </>
