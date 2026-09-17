@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(19);
+select plan(23);
 
 select is(
   (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'exams' and cmd = 'SELECT' and 'authenticated' = any(roles)),
@@ -98,6 +98,29 @@ select ok(
   'soft-delete RPC is SECURITY DEFINER'
 );
 
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.list_audit_logs(integer,integer,text,text,uuid,uuid,timestamptz,timestamptz,text)',
+    'EXECUTE'
+  ),
+  'authenticated can invoke the audit listing RPC and rely on RLS'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.list_audit_logs(integer,integer,text,text,uuid,uuid,timestamptz,timestamptz,text)',
+    'EXECUTE'
+  ),
+  'anon cannot invoke the audit listing RPC'
+);
+
+select ok(
+  not (select prosecdef from pg_proc where oid = 'public.list_audit_logs(integer,integer,text,text,uuid,uuid,timestamptz,timestamptz,text)'::regprocedure),
+  'audit listing RPC is SECURITY INVOKER'
+);
+
 insert into auth.users (id, email, raw_app_meta_data, created_at, updated_at)
 values (
   '00000000-0000-0000-0000-000000000101',
@@ -160,6 +183,15 @@ select throws_ok(
   'P0001',
   'Você não possui permissão para excluir esta prova.',
   'laboratory cannot soft-delete an exam from another laboratory'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.list_audit_logs(1, 20, null, null, null, null, null, null, null)
+  ),
+  0,
+  'laboratory cannot read audit logs through the audit RPC'
 );
 
 reset role;
