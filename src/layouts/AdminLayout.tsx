@@ -2,8 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, FlaskConical, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  useAdminSessionActions,
+  useAdminSessionQuery,
+} from "@/lib/admin-session-queries";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 
 const navItems = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
@@ -13,11 +16,19 @@ const navItems = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { clearSession } = useAdminSessionActions();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     onNavigate?.();
-    await supabase.auth.signOut();
-    navigate({ to: "/admin/login" });
+    try {
+      await clearSession();
+    } finally {
+      navigate({ to: "/admin/login" });
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -45,10 +56,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <Button
         variant="ghost"
         className="mt-auto justify-start gap-2 text-muted-foreground"
-        onClick={handleLogout}
+        disabled={loggingOut}
+        onClick={() => void handleLogout()}
       >
         <LogOut className="h-4 w-4" />
-        Sair
+        {loggingOut ? "Saindo..." : "Sair"}
       </Button>
     </nav>
   );
@@ -57,45 +69,33 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [checkingAccess, setCheckingAccess] = useState(true);
+  const { data: session, isLoading, isError } = useAdminSessionQuery();
+  const { clearSession } = useAdminSessionActions();
 
   useEffect(() => {
+    if (!isError) return;
+
     let active = true;
-
-    const checkAccess = async () => {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-
-      if (userError || !userData.user) {
+    const leave = async () => {
+      try {
+        await clearSession();
+      } finally {
         if (active) navigate({ to: "/admin/login" });
-        return;
       }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userData.user.id)
-        .single();
-
-      if (profileError || profile?.role !== "admin") {
-        await supabase.auth.signOut();
-        if (active) navigate({ to: "/admin/login" });
-        return;
-      }
-
-      if (active) setCheckingAccess(false);
     };
 
-    void checkAccess();
-
+    void leave();
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [clearSession, isError, navigate]);
 
-  if (checkingAccess) {
+  if (isLoading || !session) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-        <p className="text-sm text-muted-foreground">Verificando acesso...</p>
+        <p className="text-sm text-muted-foreground">
+          {isError ? "Redirecionando para o login..." : "Verificando acesso..."}
+        </p>
       </main>
     );
   }
@@ -115,11 +115,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <Link to="/admin" className="truncate text-sm font-semibold sm:text-base">
           Sistema de Agendamento de Provas
         </Link>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="hidden text-sm text-muted-foreground sm:inline">Administrador</span>
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <span className="hidden max-w-64 truncate text-sm text-muted-foreground sm:inline">
+            {session.email}
+          </span>
           <div
             aria-hidden
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium"
           >
             AD
           </div>
