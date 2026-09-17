@@ -12,9 +12,14 @@ const AUDIT_ACTIONS = [
 ] as const;
 
 const AUDIT_ENTITY_TYPES = ["exam", "laboratory"] as const;
+const BUSINESS_UTC_OFFSET = "-04:00";
+
+function startOfDayIso(date: string) {
+  return `${date}T00:00:00.000${BUSINESS_UTC_OFFSET}`;
+}
 
 function endOfDayIso(date: string) {
-  return `${date}T23:59:59.999Z`;
+  return `${date}T23:59:59.999${BUSINESS_UTC_OFFSET}`;
 }
 
 export async function listAuditLogs(filters: AuditFilters): Promise<AuditListResult> {
@@ -27,7 +32,7 @@ export async function listAuditLogs(filters: AuditFilters): Promise<AuditListRes
     .order("created_at", { ascending: false })
     .range(fromIndex, toIndex);
 
-  if (filters.from) query = query.gte("created_at", `${filters.from}T00:00:00.000Z`);
+  if (filters.from) query = query.gte("created_at", startOfDayIso(filters.from));
   if (filters.to) query = query.lte("created_at", endOfDayIso(filters.to));
   if (filters.laboratoryId) query = query.eq("laboratory_id", filters.laboratoryId);
   if (filters.actorUserId) query = query.eq("actor_user_id", filters.actorUserId);
