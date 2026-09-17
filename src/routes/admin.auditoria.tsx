@@ -104,8 +104,8 @@ function AdminAuditPage() {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+    if (data && page > totalPages) setPage(totalPages);
+  }, [data, page, totalPages]);
 
   const resetPage = () => setPage(1);
   const clearFilters = () => {
