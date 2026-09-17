@@ -1,6 +1,18 @@
 import { supabase } from "@/lib/supabase";
 import type { AuditFilterOptions, AuditFilters, AuditListResult, AuditLogItem } from "@/types/audit";
 
+const AUDIT_ACTIONS = [
+  "insert",
+  "update",
+  "soft_delete",
+  "restore",
+  "admin_update",
+  "status_change",
+  "provision",
+] as const;
+
+const AUDIT_ENTITY_TYPES = ["exam", "laboratory"] as const;
+
 function endOfDayIso(date: string) {
   return `${date}T23:59:59.999Z`;
 }
@@ -76,23 +88,18 @@ export async function listAuditLogs(filters: AuditFilters): Promise<AuditListRes
 }
 
 export async function getAuditFilterOptions(): Promise<AuditFilterOptions> {
-  const [laboratoriesResult, actorsResult, logsResult] = await Promise.all([
+  const [laboratoriesResult, actorsResult] = await Promise.all([
     supabase.from("laboratories").select("id, name").order("name"),
     supabase.from("profiles").select("id, email, role").order("email"),
-    supabase.from("audit_logs").select("action, entity_type"),
   ]);
 
   if (laboratoriesResult.error) throw laboratoriesResult.error;
   if (actorsResult.error) throw actorsResult.error;
-  if (logsResult.error) throw logsResult.error;
-
-  const actions = Array.from(new Set((logsResult.data ?? []).map((row) => row.action))).sort();
-  const entityTypes = Array.from(new Set((logsResult.data ?? []).map((row) => row.entity_type))).sort();
 
   return {
     laboratories: laboratoriesResult.data ?? [],
     actors: actorsResult.data ?? [],
-    actions,
-    entityTypes,
+    actions: [...AUDIT_ACTIONS],
+    entityTypes: [...AUDIT_ENTITY_TYPES],
   };
 }
