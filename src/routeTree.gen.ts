@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminCadastroRouteImport } from './routes/admin.cadastro'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
-import { Route as AdminCadastroRouteImport } from './routes/admin.cadastro'
 import { Route as LaboratorioIndexRouteImport } from './routes/laboratorio.index'
 import { Route as LaboratorioLoginRouteImport } from './routes/laboratorio.login'
 import { Route as AdminLaboratoriosIndexRouteImport } from './routes/admin.laboratorios.index'
@@ -43,11 +42,6 @@ const AdminCadastroRoute = AdminCadastroRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminCadastroRoute = AdminCadastroRouteImport.update({
-  id: '/admin/cadastro',
-  path: '/admin/cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LaboratorioIndexRoute = LaboratorioIndexRouteImport.update({
@@ -109,7 +103,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/cadastro': typeof AdminCadastroRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/cadastro': typeof AdminCadastroRoute
   '/laboratorio/login': typeof LaboratorioLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/laboratorio/': typeof LaboratorioIndexRoute
@@ -126,7 +119,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/cadastro': typeof AdminCadastroRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/cadastro': typeof AdminCadastroRoute
   '/laboratorio/login': typeof LaboratorioLoginRoute
   '/admin': typeof AdminIndexRoute
   '/laboratorio': typeof LaboratorioIndexRoute
@@ -144,7 +136,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin/cadastro': typeof AdminCadastroRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/cadastro': typeof AdminCadastroRoute
   '/laboratorio/login': typeof LaboratorioLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/laboratorio/': typeof LaboratorioIndexRoute
@@ -163,7 +154,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/cadastro'
     | '/admin/login'
-    | '/admin/cadastro'
     | '/laboratorio/login'
     | '/admin/'
     | '/laboratorio/'
@@ -180,7 +170,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/cadastro'
     | '/admin/login'
-    | '/admin/cadastro'
     | '/laboratorio/login'
     | '/admin'
     | '/laboratorio'
@@ -197,7 +186,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/cadastro'
     | '/admin/login'
-    | '/admin/cadastro'
     | '/laboratorio/login'
     | '/admin/'
     | '/laboratorio/'
@@ -215,7 +203,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminCadastroRoute: typeof AdminCadastroRoute
   AdminLoginRoute: typeof AdminLoginRoute
-  AdminCadastroRoute: typeof AdminCadastroRoute
   LaboratorioLoginRoute: typeof LaboratorioLoginRoute
   AdminIndexRoute: typeof AdminIndexRoute
   LaboratorioIndexRoute: typeof LaboratorioIndexRoute
@@ -257,13 +244,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/cadastro': {
-      id: '/admin/cadastro'
-      path: '/admin/cadastro'
-      fullPath: '/admin/cadastro'
-      preLoaderRoute: typeof AdminCadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/laboratorio/': {
@@ -343,7 +323,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminCadastroRoute: AdminCadastroRoute,
   AdminLoginRoute: AdminLoginRoute,
-  AdminCadastroRoute: AdminCadastroRoute,
   LaboratorioLoginRoute: LaboratorioLoginRoute,
   AdminIndexRoute: AdminIndexRoute,
   LaboratorioIndexRoute: LaboratorioIndexRoute,
