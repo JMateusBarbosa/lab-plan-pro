@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FlaskConical, LogOut, Menu, X } from "lucide-react";
+import { ClipboardList, LayoutDashboard, FlaskConical, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useAdminSessionActions,
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Laboratórios", to: "/admin/laboratorios", icon: FlaskConical, exact: false },
+  { label: "Auditoria", to: "/admin/auditoria", icon: ClipboardList, exact: false },
 ] as const;
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
