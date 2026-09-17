@@ -11,6 +11,7 @@ O projeto utiliza backend real com Supabase. A Área Administrativa e a Área do
 - autenticação real com Supabase Auth;
 - cadastro público de administradores desativado;
 - novos usuários só podem ser provisionados por fluxos server-side autorizados;
+- sessão administrativa centralizada e revalidada com React Query;
 - cadastro de laboratórios com criação de conta Auth e profile;
 - listagem, detalhes, edição e ativação/desativação de laboratórios;
 - alterações de laboratório passam por Edge Functions administrativas;
@@ -26,6 +27,7 @@ O projeto utiliza backend real com Supabase. A Área Administrativa e a Área do
 - bloqueio automático quando o laboratório está inativo;
 - horários reais do laboratório;
 - CRUD de provas real;
+- exclusão lógica (soft delete) com auditoria;
 - filtros de provas;
 - fluxo de P1 e recuperação;
 - validação de conflito de PC, horários e cadeia de recuperações no banco.
@@ -42,6 +44,7 @@ O projeto utiliza backend real com Supabase. A Área Administrativa e a Área do
 - Supabase Edge Functions
 - Vercel
 - GitHub Actions
+- Bun
 
 ## Banco de dados
 
@@ -51,10 +54,12 @@ Tabelas principais:
 - `laboratories`
 - `laboratory_schedules`
 - `exams`
+- `audit_logs`
+- `admin_operation_requests`
 
-As tabelas públicas usam RLS. Usuários de laboratório só conseguem acessar dados vinculados ao próprio `laboratory_id`. Mutações administrativas sensíveis não devem ser realizadas diretamente pelo navegador quando existe uma Edge Function responsável pela operação.
+As tabelas públicas usam RLS. Usuários de laboratório só conseguem acessar dados vinculados ao próprio `laboratory_id`. Mutações administrativas sensíveis passam por Edge Functions e RPCs controladas; o navegador não recebe privilégios diretos para essas alterações.
 
-As migrations ficam em `supabase/migrations/` e as Edge Functions em `supabase/functions/`.
+As migrations ficam em `supabase/migrations/`, os testes de banco em `supabase/tests/` e as Edge Functions em `supabase/functions/`.
 
 Edge Functions atuais:
 
@@ -82,23 +87,36 @@ Nunca coloque `SUPABASE_SERVICE_ROLE_KEY`, secret keys ou senhas no frontend. Ar
 
 ## Desenvolvimento local
 
+O projeto usa Bun como gerenciador de pacotes.
+
 ```bash
 bun install
 bun run dev
 ```
 
-Validações:
+Validações da aplicação:
 
 ```bash
 bun run build
 bun run lint
 ```
 
+Validação local do banco, com Supabase CLI e Docker disponíveis:
+
+```bash
+supabase start
+supabase test db
+supabase stop --no-backup
+```
+
 ## Fluxo de desenvolvimento
 
 Mudanças devem ser feitas em branch, revisadas via Pull Request e validadas pelo CI antes de entrar em `main`.
 
-O workflow atual executa instalação, build e lint.
+O workflow executa dois grupos de validação:
+
+- instalação, build e lint da aplicação;
+- reconstrução de um Supabase local a partir das migrations e execução dos testes pgTAP de invariantes de segurança.
 
 ## Regras importantes
 
@@ -106,11 +124,13 @@ O workflow atual executa instalação, build e lint.
 - laboratório inativo não recebe acesso aos próprios dados via RLS;
 - uma prova só pode usar PCs existentes no laboratório;
 - a data/horário da prova precisa corresponder a um horário ativo;
-- o mesmo PC não pode ter duas provas no mesmo laboratório, data e horário;
+- o mesmo PC não pode ter duas provas ativas no mesmo laboratório, data e horário;
 - recuperação precisa apontar para uma tentativa anterior reprovada do mesmo aluno/módulo;
 - uma tentativa não pode originar duas recuperações paralelas;
+- uma tentativa com recuperação ativa não pode ser excluída antes da recuperação;
+- provas excluídas permanecem retidas no banco, mas não aparecem no acesso normal;
 - alterações de quantidade de PCs/horários não podem invalidar provas de hoje ou futuras.
 
-## Mocks antigos
+## Dados mockados
 
-Alguns arquivos de dados/stores mockados ainda podem permanecer no repositório temporariamente como resíduo das primeiras etapas de prototipação. Eles não devem ser usados como fonte de dados definitiva. A remoção física será feita somente após validar completamente a integração real.
+Os antigos stores e arquivos de dados mockados usados durante a prototipação foram removidos. A aplicação utiliza apenas as fontes reais de dados e as APIs do Supabase.
