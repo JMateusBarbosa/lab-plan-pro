@@ -68,12 +68,12 @@ select ok(
 );
 
 select ok(
-  not has_function_privilege('authenticated', 'private.admin_update_laboratory(uuid,text,text,text,text,text,text,integer,jsonb,uuid)', 'EXECUTE'),
+  not has_function_privilege('authenticated', 'public.admin_update_laboratory_config(uuid,uuid,jsonb,jsonb)', 'EXECUTE'),
   'authenticated cannot call admin laboratory update RPC directly'
 );
 
 select ok(
-  not has_function_privilege('authenticated', 'private.admin_set_laboratory_status(uuid,text,uuid)', 'EXECUTE'),
+  not has_function_privilege('authenticated', 'public.admin_set_laboratory_status(uuid,uuid,text)', 'EXECUTE'),
   'authenticated cannot call admin status RPC directly'
 );
 
