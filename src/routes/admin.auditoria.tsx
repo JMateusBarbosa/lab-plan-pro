@@ -125,7 +125,8 @@ function changedFields(record: AuditLogRecord) {
 
 function csvCell(value: unknown) {
   const text = value == null ? "" : typeof value === "string" ? value : JSON.stringify(value);
-  return `"${text.replaceAll('"', '""')}"`;
+  const safeText = /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text;
+  return `"${safeText.replaceAll('"', '""')}"`;
 }
 
 function downloadCsv(filename: string, content: string) {
