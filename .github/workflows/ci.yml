@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies and inspect lockfile drift
         run: |
-          bun install --no-save
+          bun install
           git diff -- bun.lock
           git diff --exit-code -- bun.lock
 
