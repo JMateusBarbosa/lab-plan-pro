@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,8 +27,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import type { AuditLogRecord } from "@/lib/admin-audit-api";
 import {
+  listAllFilteredAuditLogs,
+  type AuditLogRecord,
+} from "@/lib/admin-audit-api";
+import {
+  useAdminAuditActorsQuery,
   useAdminAuditLaboratoriesQuery,
   useAdminAuditQuery,
 } from "@/lib/admin-audit-queries";
@@ -60,6 +64,30 @@ const entityLabels: Record<string, string> = {
   laboratory: "Laboratório",
 };
 
+const fieldLabels: Record<string, string> = {
+  id: "ID",
+  student_name: "Aluno",
+  module: "Módulo",
+  pc_number: "Computador",
+  exam_date: "Data da prova",
+  student_class_time: "Horário",
+  exam_type: "Tipo de prova",
+  status: "Status",
+  previous_exam_id: "Prova anterior",
+  laboratory_id: "Laboratório",
+  name: "Nome",
+  school_name: "Escola",
+  city: "Cidade",
+  state: "UF",
+  responsible: "Responsável",
+  phone: "Telefone",
+  computer_count: "Computadores",
+  deleted_at: "Excluída em",
+  deleted_by: "Excluída por",
+  created_at: "Criado em",
+  updated_at: "Atualizado em",
+};
+
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -68,12 +96,78 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-function JsonBlock({ value, empty }: { value: unknown; empty: string }) {
-  if (value == null) return <p className="text-sm text-muted-foreground">{empty}</p>;
+function toObject(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function formatValue(value: unknown) {
+  if (value == null || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function changedFields(record: AuditLogRecord) {
+  const before = toObject(record.beforeData) ?? {};
+  const after = toObject(record.afterData) ?? {};
+  const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+
+  return keys
+    .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
+    .map((key) => ({
+      key,
+      label: fieldLabels[key] ?? key,
+      before: before[key],
+      after: after[key],
+    }));
+}
+
+function csvCell(value: unknown) {
+  const text = value == null ? "" : typeof value === "string" ? value : JSON.stringify(value);
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(filename: string, content: string) {
+  const blob = new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function AuditDiff({ record }: { record: AuditLogRecord }) {
+  const changes = changedFields(record);
+
+  if (changes.length === 0) {
+    return <p className="text-sm text-muted-foreground">Nenhuma alteração de campo foi identificada neste evento.</p>;
+  }
+
   return (
-    <pre className="max-h-80 overflow-auto rounded-md border bg-muted/40 p-3 text-xs leading-relaxed">
-      {JSON.stringify(value, null, 2)}
-    </pre>
+    <div className="overflow-x-auto rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Campo</TableHead>
+            <TableHead>Antes</TableHead>
+            <TableHead>Depois</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {changes.map((change) => (
+            <TableRow key={change.key}>
+              <TableCell className="font-medium">{change.label}</TableCell>
+              <TableCell className="max-w-64 break-words text-sm text-muted-foreground">{formatValue(change.before)}</TableCell>
+              <TableCell className="max-w-64 break-words text-sm">{formatValue(change.after)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -82,9 +176,22 @@ function AdminAuditPage() {
   const [action, setAction] = useState("todos");
   const [entityType, setEntityType] = useState("todos");
   const [laboratoryId, setLaboratoryId] = useState("todos");
+  const [actorUserId, setActorUserId] = useState("todos");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AuditLogRecord | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchDraft.trim());
+      setPage(1);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft]);
 
   const filters = useMemo(
     () => ({
@@ -93,14 +200,17 @@ function AdminAuditPage() {
       action: action === "todos" ? undefined : action,
       entityType: entityType === "todos" ? undefined : entityType,
       laboratoryId: laboratoryId === "todos" ? undefined : laboratoryId,
+      actorUserId: actorUserId === "todos" ? undefined : actorUserId,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      search: search || undefined,
     }),
-    [action, endDate, entityType, laboratoryId, page, startDate],
+    [action, actorUserId, endDate, entityType, laboratoryId, page, search, startDate],
   );
 
   const { data, isLoading, isError, refetch } = useAdminAuditQuery(filters);
   const { data: laboratories = [] } = useAdminAuditLaboratoriesQuery();
+  const { data: actors = [] } = useAdminAuditActorsQuery();
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
   useEffect(() => {
@@ -112,23 +222,80 @@ function AdminAuditPage() {
     setAction("todos");
     setEntityType("todos");
     setLaboratoryId("todos");
+    setActorUserId("todos");
     setStartDate("");
     setEndDate("");
+    setSearchDraft("");
+    setSearch("");
     setPage(1);
+    setExportMessage(null);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportMessage(null);
+    try {
+      const { records, total, truncated } = await listAllFilteredAuditLogs({
+        action: filters.action,
+        entityType: filters.entityType,
+        laboratoryId: filters.laboratoryId,
+        actorUserId: filters.actorUserId,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        search: filters.search,
+      });
+
+      const header = ["Data/Hora", "Ação", "Entidade", "Laboratório", "Ator", "Papel", "ID da entidade", "Antes", "Depois"];
+      const rows = records.map((record) => [
+        formatDateTime(record.createdAt),
+        actionLabels[record.action] ?? record.action,
+        entityLabels[record.entityType] ?? record.entityType,
+        record.laboratoryName ?? "",
+        record.actorEmail ?? record.actorUserId ?? "Sistema",
+        record.actorRole ?? "",
+        record.entityId ?? "",
+        record.beforeData,
+        record.afterData,
+      ]);
+
+      const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+      downloadCsv(`auditoria-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+      setExportMessage(
+        truncated
+          ? `Foram exportados os primeiros ${records.length} de ${total} eventos.`
+          : `${records.length} evento${records.length === 1 ? "" : "s"} exportado${records.length === 1 ? "" : "s"}.`,
+      );
+    } catch {
+      setExportMessage("Não foi possível exportar a auditoria.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold sm:text-2xl">Auditoria</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Histórico imutável das alterações registradas pelo sistema.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold sm:text-2xl">Auditoria</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Histórico imutável das alterações registradas pelo sistema.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => void handleExport()} disabled={isExporting || !data?.total}>
+            {isExporting ? "Exportando..." : "Exportar CSV"}
+          </Button>
         </div>
 
         <Card>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Input
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              placeholder="Buscar aluno, módulo, e-mail, ID..."
+              aria-label="Buscar na auditoria"
+            />
+
             <Select value={action} onValueChange={(value) => { setAction(value); resetPage(); }}>
               <SelectTrigger><SelectValue placeholder="Ação" /></SelectTrigger>
               <SelectContent>
@@ -158,12 +325,25 @@ function AdminAuditPage() {
               </SelectContent>
             </Select>
 
+            <Select value={actorUserId} onValueChange={(value) => { setActorUserId(value); resetPage(); }}>
+              <SelectTrigger><SelectValue placeholder="Ator" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os atores</SelectItem>
+                {actors.map((actor) => (
+                  <SelectItem key={actor.id} value={actor.id}>
+                    {actor.email} · {actor.role === "admin" ? "Admin" : "Laboratório"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Input type="date" value={startDate} onChange={(event) => { setStartDate(event.target.value); resetPage(); }} aria-label="Data inicial" />
             <Input type="date" value={endDate} onChange={(event) => { setEndDate(event.target.value); resetPage(); }} aria-label="Data final" />
             <Button variant="outline" onClick={clearFilters}>Limpar filtros</Button>
           </CardContent>
         </Card>
 
+        {exportMessage ? <p className="text-sm text-muted-foreground">{exportMessage}</p> : null}
         {isLoading ? <p className="text-sm text-muted-foreground">Carregando eventos...</p> : null}
         {isError ? (
           <div className="flex items-center gap-3">
@@ -197,7 +377,9 @@ function AdminAuditPage() {
                       <TableCell><Badge variant="secondary">{actionLabels[record.action] ?? record.action}</Badge></TableCell>
                       <TableCell>{entityLabels[record.entityType] ?? record.entityType}</TableCell>
                       <TableCell>{record.laboratoryName ?? "—"}</TableCell>
-                      <TableCell>{record.actorRole === "admin" ? "Administrador" : record.actorRole === "laboratory" ? "Laboratório" : "Sistema"}</TableCell>
+                      <TableCell className="max-w-56 truncate" title={record.actorEmail ?? undefined}>
+                        {record.actorEmail ?? (record.actorRole === "admin" ? "Administrador" : record.actorRole === "laboratory" ? "Laboratório" : "Sistema")}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="outline" onClick={() => setSelected(record)}>Visualizar</Button>
                       </TableCell>
@@ -223,7 +405,7 @@ function AdminAuditPage() {
       </div>
 
       <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Detalhes do evento</DialogTitle>
             <DialogDescription>
@@ -231,14 +413,25 @@ function AdminAuditPage() {
             </DialogDescription>
           </DialogHeader>
           {selected ? (
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Antes</h3>
-                <JsonBlock value={selected.beforeData} empty="Não há estado anterior para este evento." />
+            <div className="space-y-5">
+              <div className="grid gap-3 rounded-md border p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div><span className="text-muted-foreground">Entidade</span><p className="font-medium">{entityLabels[selected.entityType] ?? selected.entityType}</p></div>
+                <div><span className="text-muted-foreground">Ator</span><p className="break-all font-medium">{selected.actorEmail ?? selected.actorUserId ?? "Sistema"}</p></div>
+                <div><span className="text-muted-foreground">Laboratório</span><p className="font-medium">{selected.laboratoryName ?? "—"}</p></div>
+                <div><span className="text-muted-foreground">ID da entidade</span><p className="break-all font-mono text-xs">{selected.entityId ?? "—"}</p></div>
               </div>
+
+              {selected.laboratoryId ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/admin/laboratorios/$id" params={{ id: selected.laboratoryId }}>
+                    Abrir laboratório relacionado
+                  </Link>
+                </Button>
+              ) : null}
+
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Depois</h3>
-                <JsonBlock value={selected.afterData} empty="Não há estado posterior para este evento." />
+                <h3 className="text-sm font-medium">Alterações</h3>
+                <AuditDiff record={selected} />
               </div>
             </div>
           ) : null}
