@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { signInAdmin } from "@/lib/admin-session-api";
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
@@ -36,37 +36,14 @@ function AdminLogin() {
 
     setLoading(true);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-
-    if (authError || !data.user) {
+    try {
+      await signInAdmin(email, password);
+      navigate({ to: "/admin" });
+    } catch (sessionError) {
+      setError(sessionError instanceof Error ? sessionError.message : "Não foi possível entrar.");
+    } finally {
       setLoading(false);
-      const message = authError?.message?.toLowerCase() ?? "";
-      if (message.includes("email not confirmed")) {
-        setError("Seu e-mail ainda não foi confirmado. Abra a mensagem enviada pelo Supabase e confirme a conta antes de entrar.");
-      } else {
-        setError("E-mail ou senha inválidos.");
-      }
-      return;
     }
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-
-    if (profileError || profile?.role !== "admin") {
-      await supabase.auth.signOut();
-      setLoading(false);
-      setError("Esta conta não possui acesso administrativo.");
-      return;
-    }
-
-    setLoading(false);
-    navigate({ to: "/admin" });
   };
 
   return (

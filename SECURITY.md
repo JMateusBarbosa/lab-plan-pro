@@ -78,6 +78,8 @@ Provas não são removidas fisicamente pelo fluxo normal da aplicação. A exclu
 
 O navegador não possui `DELETE` em `public.exams`. A operação passa por `public.soft_delete_exam()`.
 
+`public.soft_delete_exam()` é `SECURITY DEFINER`, usa `search_path = ''` e faz autorização explícita antes da mutação: exige sessão autenticada, profile `laboratory`, laboratório ativo e prova pertencente ao mesmo `laboratory_id`. Isso permite que o registro seja marcado como excluído sem precisar relaxar a policy de `SELECT` que esconde `deleted_at is not null`.
+
 Uma prova que possui recuperação ativa não pode ser excluída antes da recuperação. Isso preserva a cadeia histórica `previous_exam_id`.
 
 ## Auditoria
@@ -123,9 +125,26 @@ As policies devem garantir que:
 - laboratório só visualiza o próprio laboratório ativo e seus horários;
 - laboratório só manipula provas cujo `laboratory_id` corresponde a `private.current_laboratory_id()`;
 - registros de provas com `deleted_at` não nulo ficam fora do acesso operacional normal;
+- deve existir somente uma policy permissiva de `SELECT` para `authenticated` em `public.exams`, evitando que uma policy antiga contorne o filtro de soft delete;
 - usuários não podem alterar diretamente `profiles` para mudar role ou vínculo com laboratório.
 
 Qualquer mudança em policies deve ser seguida de testes de isolamento entre dois laboratórios distintos.
+
+## Testes automatizados de segurança
+
+Os invariantes de banco ficam em `supabase/tests/` e são executados com pgTAP sobre um Supabase local descartável no CI.
+
+O job `database-security` deve reconstruir o banco a partir de todas as migrations e validar, entre outros pontos:
+
+- grants mínimos de `anon` e `authenticated`;
+- ausência de `DELETE` físico de provas pelo navegador;
+- RPCs administrativas inacessíveis a `authenticated`;
+- existência de uma única policy de `SELECT` operacional em `exams`;
+- soft delete escondendo a prova via RLS enquanto mantém o registro fisicamente retido;
+- atribuição de `deleted_by` ao ator correto;
+- bloqueio de soft delete entre laboratórios distintos.
+
+Nenhuma mudança em RLS, grants ou `soft_delete_exam()` deve entrar em `main` com esse job falhando.
 
 ## HTTP, CSP e CORS
 
@@ -154,9 +173,11 @@ Uma origem de preview/staging nova deve ser adicionada explicitamente à configu
 
 CORS é apenas uma proteção de navegador e **não substitui autenticação/autorização**. As Edge Functions continuam exigindo JWT válido e validação de `profiles.role = admin`.
 
-## Segredos
+## Segredos e dependências
 
 O Git ignora `.env`, `.env.*` e `.dev.vars`. Apenas `.env.example`, sem valores reais, deve ser versionado.
+
+O projeto usa Bun e mantém `bun.lock` como lockfile canônico. O CI deve instalar dependências com `bun install --frozen-lockfile`, para impedir atualização silenciosa de versões durante uma validação.
 
 Antes de qualquer commit, não inclua:
 
@@ -173,10 +194,13 @@ Antes de qualquer commit, não inclua:
 - cadastro público bloqueado pelo backend;
 - proteção contra senhas vazadas ativada quando disponível;
 - grants e RLS revisados após qualquer nova tabela ou função;
+- testes pgTAP de segurança e isolamento verdes;
 - CSP e demais headers de segurança confirmados em resposta HTTPS real;
 - CORS das Edge Functions testado com origem autorizada e origem rejeitada;
 - auditoria de ações sensíveis ativa e sem segredos;
 - soft delete de provas e cadeia histórica validados;
 - operações administrativas multi-etapa executadas de forma transacional quando possível;
 - migrations e Edge Functions sincronizadas entre Git e Supabase;
-- CI verde e testes de autorização executados.
+- `routeTree.gen.ts` sincronizado com o gerador do TanStack;
+- instalação reproduzível via lockfile congelado;
+- CI verde antes de merge em `main`.
