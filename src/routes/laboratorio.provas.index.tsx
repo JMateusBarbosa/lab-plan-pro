@@ -5,6 +5,7 @@ import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
 import { ExamCard } from "@/components/ExamCard";
 import { ExamStatusBadge } from "@/components/ExamStatusBadge";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { ExamResultDialog } from "@/components/ExamResultDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,12 @@ import {
 } from "@/lib/laboratory-exams-queries";
 import { getLocalDateString } from "@/lib/date";
 import { buildComputerList } from "@/types/laboratory";
-import { examTypeLabels, type Exam } from "@/types/exam";
+import type { Exam } from "@/types/exam";
+import {
+  canScheduleNextAttempt,
+  findNextAttempt,
+  getExamAttemptLabel,
+} from "@/lib/exam-lineage";
 
 export const Route = createFileRoute("/laboratorio/provas/")({
   head: () => ({
@@ -206,12 +212,23 @@ function ProvasLista() {
                       <TableCell>{exam.examDate}</TableCell>
                       <TableCell>{exam.studentClassTime}</TableCell>
                       <TableCell>PC {exam.pcNumber}</TableCell>
-                      <TableCell>{examTypeLabels[exam.examType]}</TableCell>
+                      <TableCell>{getExamAttemptLabel(exams, exam)}</TableCell>
                       <TableCell><ExamStatusBadge status={exam.status} /></TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <ExamResultDialog exam={exam} exams={exams} />
+                          {canScheduleNextAttempt(exams, exam) ? (
+                            <Button asChild size="sm">
+                              <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>Próxima tentativa</Link>
+                            </Button>
+                          ) : null}
+                          {findNextAttempt(exams, exam.id) ? (
+                            <Button asChild size="sm" variant="outline">
+                              <Link to="/laboratorio/provas/$id" params={{ id: findNextAttempt(exams, exam.id)!.id }}>Ver próxima</Link>
+                            </Button>
+                          ) : null}
                           <Button asChild size="sm" variant="outline"><Link to="/laboratorio/provas/$id" params={{ id: exam.id }}>Ver</Link></Button>
-                          <Button asChild size="sm" variant="outline"><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar</Link></Button>
+                          <Button asChild size="sm" variant="outline"><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar dados</Link></Button>
                           <Button size="sm" variant="destructive" disabled={deleteExam.isPending} onClick={() => setToDelete(exam)}>Excluir</Button>
                         </div>
                       </TableCell>
@@ -222,7 +239,7 @@ function ProvasLista() {
             </div>
 
             <div className="grid gap-4 md:hidden">
-              {filtered.map((exam) => <ExamCard key={exam.id} exam={exam} onDelete={setToDelete} />)}
+              {filtered.map((exam) => <ExamCard key={exam.id} exam={exam} exams={exams} onDelete={setToDelete} />)}
             </div>
           </>
         ) : null}

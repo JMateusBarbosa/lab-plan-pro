@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
 import { ExamStatusBadge } from "@/components/ExamStatusBadge";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { ExamResultDialog } from "@/components/ExamResultDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,6 +13,11 @@ import {
   useLaboratoryExamsQuery,
 } from "@/lib/laboratory-exams-queries";
 import { examTypeLabels } from "@/types/exam";
+import {
+  canScheduleNextAttempt,
+  findNextAttempt,
+  getExamAttemptLabel,
+} from "@/lib/exam-lineage";
 
 export const Route = createFileRoute("/laboratorio/provas/$id/")({
   head: () => ({
@@ -69,6 +75,9 @@ function DetalhesProva() {
   const previousExam = exam.previousExamId
     ? exams.find((candidate) => candidate.id === exam.previousExamId)
     : undefined;
+  const nextExam = findNextAttempt(exams, exam.id);
+  const attemptLabel = getExamAttemptLabel(exams, exam);
+  const canScheduleNext = canScheduleNextAttempt(exams, exam);
 
   const handleDelete = async () => {
     if (deleteExam.isPending) return;
@@ -91,7 +100,18 @@ function DetalhesProva() {
             <p className="text-sm text-muted-foreground">{exam.module}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar</Link></Button>
+            <ExamResultDialog exam={exam} exams={exams} />
+            {canScheduleNext ? (
+              <Button asChild>
+                <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>Agendar próxima tentativa</Link>
+              </Button>
+            ) : null}
+            {nextExam ? (
+              <Button asChild variant="outline">
+                <Link to="/laboratorio/provas/$id" params={{ id: nextExam.id }}>Ver próxima tentativa</Link>
+              </Button>
+            ) : null}
+            <Button asChild variant="outline"><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar dados</Link></Button>
             <Button variant="destructive" disabled={deleteExam.isPending} onClick={() => setConfirmOpen(true)}>Excluir</Button>
             <Button variant="ghost" onClick={() => navigate({ to: "/laboratorio/provas" })}>Voltar</Button>
           </div>
@@ -106,12 +126,26 @@ function DetalhesProva() {
               <Info label="Data" value={exam.examDate} />
               <Info label="Horário da aula" value={exam.studentClassTime} />
               <Info label="Computador" value={`PC ${exam.pcNumber}`} />
-              <Info label="Tipo" value={examTypeLabels[exam.examType]} />
+              <Info label="Tentativa" value={attemptLabel} />
               <Info label="Status" value={<ExamStatusBadge status={exam.status} />} />
               <Info label="Data do cadastro" value={new Date(exam.createdAt).toLocaleString("pt-BR")} />
             </dl>
           </CardContent>
         </Card>
+
+        {exam.status === "reprovado" && !nextExam ? (
+          <Card className="border-amber-200">
+            <CardHeader><CardTitle className="text-base">Próxima ação</CardTitle></CardHeader>
+            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Esta tentativa foi reprovada e ainda não possui uma próxima tentativa agendada.
+              </p>
+              <Button asChild>
+                <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>Agendar próxima tentativa</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {exam.examType === "recuperacao" ? (
           <Card>
