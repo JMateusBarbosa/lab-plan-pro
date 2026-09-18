@@ -216,7 +216,7 @@ function ProvasLista() {
                       <TableCell><ExamStatusBadge status={exam.status} /></TableCell>
                       <TableCell>
                         <div className="flex flex-wrap justify-end gap-2">
-                          {exam.status === "pendente" ? <ExamResultDialog exam={exam} exams={exams} /> : null}
+                          <ExamResultDialog exam={exam} exams={exams} />
                           {canScheduleNextAttempt(exams, exam) ? (
                             <Button asChild size="sm">
                               <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>Próxima tentativa</Link>
