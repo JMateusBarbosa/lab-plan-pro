@@ -13,7 +13,6 @@ import {
   useLaboratoryExamQuery,
   useLaboratoryExamsQuery,
 } from "@/lib/laboratory-exams-queries";
-import { examTypeLabels } from "@/types/exam";
 import {
   canScheduleNextAttempt,
   findNextAttempt,
