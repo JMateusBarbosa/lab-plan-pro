@@ -67,6 +67,24 @@ function ProximaTentativa() {
     return <LaboratoryLayout><p className="text-sm text-muted-foreground">Carregando tentativa anterior...</p></LaboratoryLayout>;
   }
 
+  if (sourceError || examsError) {
+    return (
+      <LaboratoryLayout>
+        <div className="space-y-3">
+          <p className="text-sm text-destructive">
+            Não foi possível carregar os dados necessários para agendar a próxima tentativa.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => void Promise.all([refetchSource(), refetchExams()])}
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      </LaboratoryLayout>
+    );
+  }
+
   if (!source) {
     return (
       <LaboratoryLayout>
