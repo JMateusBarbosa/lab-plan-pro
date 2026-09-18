@@ -45,9 +45,11 @@ export function ExamResultDialog({ exam, exams }: ExamResultDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Registrar resultado</Button>
-      </DialogTrigger>
+      {exam.status === "pendente" ? (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">Registrar resultado</Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Registrar resultado</DialogTitle>
