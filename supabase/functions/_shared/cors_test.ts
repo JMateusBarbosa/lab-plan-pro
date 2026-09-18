@@ -36,33 +36,33 @@ async function withoutConfiguredOrigins<T>(run: () => T | Promise<T>): Promise<T
 Deno.test("CORS accepts the production origin and reflects it exactly", async () => {
   await withoutConfiguredOrigins(() => {
     const origin = "https://labs-sistema.vercel.app";
-  const request = new Request("https://example.test", {
-    headers: { Origin: origin },
-  });
+    const request = new Request("https://example.test", {
+      headers: { Origin: origin },
+    });
 
-  assert(isOriginAllowed(origin), "The production origin should be allowed.");
+    assert(isOriginAllowed(origin), "The production origin should be allowed.");
 
-  const headers = corsHeadersForRequest(request);
-  assertEquals(
-    headers["Access-Control-Allow-Origin"],
-    origin,
-    "The allowed production origin must be reflected in the response.",
-  );
+    const headers = corsHeadersForRequest(request);
+    assertEquals(
+      headers["Access-Control-Allow-Origin"],
+      origin,
+      "The allowed production origin must be reflected in the response.",
+    );
     assertEquals(headers.Vary, "Origin", "CORS responses must vary by Origin.");
   });
 });
 
 Deno.test("CORS accepts the local development origins currently used by the project", async () => {
   await withoutConfiguredOrigins(() => {
-  const origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8080",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:8080",
-    "http://192.168.56.1:8080",
-  ];
+    const origins = [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:8080",
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:8080",
+      "http://192.168.56.1:8080",
+    ];
 
     for (const origin of origins) {
       assert(isOriginAllowed(origin), `Expected local origin to be allowed: ${origin}`);
@@ -72,12 +72,12 @@ Deno.test("CORS accepts the local development origins currently used by the proj
 
 Deno.test("CORS rejects unknown origins instead of accepting broad Vercel or private-network patterns", async () => {
   await withoutConfiguredOrigins(() => {
-  const blockedOrigins = [
-    "https://evil.example.com",
-    "https://labs-sistema-attacker.vercel.app",
-    "https://random-preview.vercel.app",
-    "http://192.168.1.10:8080",
-  ];
+    const blockedOrigins = [
+      "https://evil.example.com",
+      "https://labs-sistema-attacker.vercel.app",
+      "https://random-preview.vercel.app",
+      "http://192.168.1.10:8080",
+    ];
 
     for (const origin of blockedOrigins) {
       assert(!isOriginAllowed(origin), `Expected origin to be blocked: ${origin}`);
@@ -95,9 +95,9 @@ Deno.test("CORS rejects unknown origins instead of accepting broad Vercel or pri
 
 Deno.test("requests without Origin remain available to non-browser callers", async () => {
   await withoutConfiguredOrigins(() => {
-  assert(isOriginAllowed(null), "Requests without Origin should be accepted.");
+    assert(isOriginAllowed(null), "Requests without Origin should be accepted.");
 
-  const headers = corsHeadersForRequest(new Request("https://example.test"));
+    const headers = corsHeadersForRequest(new Request("https://example.test"));
     assert(
       !("Access-Control-Allow-Origin" in headers),
       "A non-browser request must not receive a fabricated Access-Control-Allow-Origin header.",
@@ -108,45 +108,45 @@ Deno.test("requests without Origin remain available to non-browser callers", asy
 Deno.test("allowed preflight returns all headers required by current project clients", async () => {
   await withoutConfiguredOrigins(async () => {
     const origin = "http://localhost:8080";
-  const response = handleCorsPreflight(
-    new Request("https://example.test", {
-      method: "OPTIONS",
-      headers: {
-        Origin: origin,
-        "Access-Control-Request-Method": "POST",
-        "Access-Control-Request-Headers":
-          "authorization, x-client-info, apikey, content-type, x-idempotency-key, x-retry-count, x-region, traceparent, tracestate, baggage",
-      },
-    }),
-  );
+    const response = handleCorsPreflight(
+      new Request("https://example.test", {
+        method: "OPTIONS",
+        headers: {
+          Origin: origin,
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers":
+            "authorization, x-client-info, apikey, content-type, x-idempotency-key, x-retry-count, x-region, traceparent, tracestate, baggage",
+        },
+      }),
+    );
 
-  assertEquals(response.status, 200, "Allowed preflight should succeed.");
-  assertEquals(
-    response.headers.get("Access-Control-Allow-Origin"),
-    origin,
-    "Allowed preflight must reflect the request origin.",
-  );
-  assertEquals(
-    response.headers.get("Access-Control-Allow-Methods"),
-    "POST, OPTIONS",
-    "Only the methods used by the administrative functions should be advertised.",
-  );
-  assertEquals(response.headers.get("Vary"), "Origin", "Preflight must vary by Origin.");
-  assertEquals(await response.text(), "ok", "Successful preflight should return the expected body.");
+    assertEquals(response.status, 200, "Allowed preflight should succeed.");
+    assertEquals(
+      response.headers.get("Access-Control-Allow-Origin"),
+      origin,
+      "Allowed preflight must reflect the request origin.",
+    );
+    assertEquals(
+      response.headers.get("Access-Control-Allow-Methods"),
+      "POST, OPTIONS",
+      "Only the methods used by the administrative functions should be advertised.",
+    );
+    assertEquals(response.headers.get("Vary"), "Origin", "Preflight must vary by Origin.");
+    assertEquals(await response.text(), "ok", "Successful preflight should return the expected body.");
 
-  const headers = allowedHeaders(response);
-  const requiredHeaders = [
-    "authorization",
-    "x-client-info",
-    "apikey",
-    "content-type",
-    "x-idempotency-key",
-    "x-retry-count",
-    "x-region",
-    "traceparent",
-    "tracestate",
-    "baggage",
-  ];
+    const headers = allowedHeaders(response);
+    const requiredHeaders = [
+      "authorization",
+      "x-client-info",
+      "apikey",
+      "content-type",
+      "x-idempotency-key",
+      "x-retry-count",
+      "x-region",
+      "traceparent",
+      "tracestate",
+      "baggage",
+    ];
 
     for (const header of requiredHeaders) {
       assert(headers.includes(header), `Missing required CORS header: ${header}`);
@@ -157,18 +157,18 @@ Deno.test("allowed preflight returns all headers required by current project cli
 Deno.test("blocked preflight returns 403 without exposing an allowed origin", async () => {
   await withoutConfiguredOrigins(async () => {
     const response = handleCorsPreflight(
-    new Request("https://example.test", {
-      method: "OPTIONS",
-      headers: { Origin: "https://untrusted.example.com" },
-    }),
-  );
+      new Request("https://example.test", {
+        method: "OPTIONS",
+        headers: { Origin: "https://untrusted.example.com" },
+      }),
+    );
 
-  assertEquals(response.status, 403, "Blocked preflight should return 403.");
-  assertEquals(response.headers.get("Vary"), "Origin", "Blocked preflight must vary by Origin.");
-  assert(
-    response.headers.get("Access-Control-Allow-Origin") === null,
-    "Blocked preflight must not expose Access-Control-Allow-Origin.",
-  );
+    assertEquals(response.status, 403, "Blocked preflight should return 403.");
+    assertEquals(response.headers.get("Vary"), "Origin", "Blocked preflight must vary by Origin.");
+    assert(
+      response.headers.get("Access-Control-Allow-Origin") === null,
+      "Blocked preflight must not expose Access-Control-Allow-Origin.",
+    );
 
     const body = await response.json();
     assertEquals(body.error, "Origem não autorizada.", "Blocked preflight should explain the rejection.");
