@@ -25,7 +25,6 @@ type PdfPage = {
 const PAGE_WIDTH = 841.89;
 const PAGE_HEIGHT = 595.28;
 const MARGIN = 36;
-const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const LINE_HEIGHT = 12;
 const FONT_SIZE = 9;
 const MAX_VALUE_LENGTH = 220;
@@ -410,7 +409,12 @@ export function createAuditPdfBlob(
   truncated: boolean,
 ) {
   const pages = buildDocument(records, filters, total, truncated);
-  return new Blob([serializePdf(pages)], { type: "application/pdf" });
+  const bytes = serializePdf(pages);
+  const buffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+  return new Blob([buffer], { type: "application/pdf" });
 }
 
 export function downloadAuditPdf(
