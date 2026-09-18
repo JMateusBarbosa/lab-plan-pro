@@ -43,8 +43,18 @@ function ProximaTentativa() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { data: session } = useLaboratorySessionQuery();
-  const { data: source, isLoading: loadingSource } = useLaboratoryExamQuery(id);
-  const { data: exams = [], isLoading: loadingExams } = useLaboratoryExamsQuery();
+  const {
+    data: source,
+    isLoading: loadingSource,
+    isError: sourceError,
+    refetch: refetchSource,
+  } = useLaboratoryExamQuery(id);
+  const {
+    data: exams = [],
+    isLoading: loadingExams,
+    isError: examsError,
+    refetch: refetchExams,
+  } = useLaboratoryExamsQuery();
   const createExam = useCreateLaboratoryExamMutation(session?.laboratory.id ?? "");
 
   const [examDate, setExamDate] = useState(getLocalDateString());
