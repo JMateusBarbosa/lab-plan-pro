@@ -258,19 +258,15 @@ function buildDocument(
       }),
     );
     page.y -= 16;
-    addWrappedText(page, `Filtros: ${describeFilters(filters)}`, MARGIN, 130, {
-      size: 8,
-    });
-    page.y -= 2;
     page.commands.push(lineCommand(MARGIN, page.y, PAGE_WIDTH - MARGIN, page.y));
     page.y -= 15;
   };
 
   headerFactory(pages[0], 1);
 
-  const firstPage = pages[0];
+  let page = pages[0];
   addWrappedText(
-    firstPage,
+    page,
     `Gerado em: ${generatedAt} | Registros exportados: ${records.length} de ${total}${
       truncated ? " (limite de exportação atingido)" : ""
     }`,
@@ -278,7 +274,33 @@ function buildDocument(
     130,
     { size: 8 },
   );
-  firstPage.y -= 8;
+  page.y -= 6;
+
+  page.commands.push(
+    textCommand("Filtros aplicados", MARGIN, page.y, { size: 8, bold: true }),
+  );
+  page.y -= LINE_HEIGHT;
+
+  const filterLines = wrapText(describeFilters(filters), 130);
+  for (const line of filterLines) {
+    if (page.y - LINE_HEIGHT < MARGIN + 20) {
+      page = createPage();
+      pages.push(page);
+      headerFactory(page, pages.length);
+      page.commands.push(
+        textCommand("Filtros aplicados (continuação)", MARGIN, page.y, {
+          size: 8,
+          bold: true,
+        }),
+      );
+      page.y -= LINE_HEIGHT;
+    }
+
+    page.commands.push(textCommand(line, MARGIN, page.y, { size: 8 }));
+    page.y -= LINE_HEIGHT;
+  }
+
+  page.y -= 8;
 
   records.forEach((record, index) => {
     const { heading, summary, changes } = eventLines(record);
