@@ -100,7 +100,7 @@ function DetalhesProva() {
             <p className="text-sm text-muted-foreground">{exam.module}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {exam.status === "pendente" ? <ExamResultDialog exam={exam} exams={exams} /> : null}
+            <ExamResultDialog exam={exam} exams={exams} />
             {canScheduleNext ? (
               <Button asChild>
                 <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>Agendar próxima tentativa</Link>
