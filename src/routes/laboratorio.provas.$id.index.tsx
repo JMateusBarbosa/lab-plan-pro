@@ -5,6 +5,7 @@ import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
 import { ExamStatusBadge } from "@/components/ExamStatusBadge";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { ExamResultDialog } from "@/components/ExamResultDialog";
+import { ExamAttemptTimeline } from "@/components/ExamAttemptTimeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -42,20 +43,25 @@ function DetalhesProva() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { data: exam, isLoading, isError, refetch } = useLaboratoryExamQuery(id);
-  const { data: exams = [] } = useLaboratoryExamsQuery();
+  const {
+    data: exams = [],
+    isLoading: isLoadingExams,
+    isError: isExamsError,
+    refetch: refetchExams,
+  } = useLaboratoryExamsQuery();
   const deleteExam = useDeleteLaboratoryExamMutation();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  if (isLoading) {
+  if (isLoading || isLoadingExams) {
     return <LaboratoryLayout><p className="text-sm text-muted-foreground">Carregando prova...</p></LaboratoryLayout>;
   }
 
-  if (isError) {
+  if (isError || isExamsError) {
     return (
       <LaboratoryLayout>
         <div className="space-y-3">
           <p className="text-sm text-destructive">Não foi possível carregar a prova.</p>
-          <Button variant="outline" onClick={() => void refetch()}>Tentar novamente</Button>
+          <Button variant="outline" onClick={() => void Promise.all([refetch(), refetchExams()])}>Tentar novamente</Button>
         </div>
       </LaboratoryLayout>
     );
@@ -72,9 +78,6 @@ function DetalhesProva() {
     );
   }
 
-  const previousExam = exam.previousExamId
-    ? exams.find((candidate) => candidate.id === exam.previousExamId)
-    : undefined;
   const nextExam = findNextAttempt(exams, exam.id);
   const attemptLabel = getExamAttemptLabel(exams, exam);
   const canScheduleNext = canScheduleNextAttempt(exams, exam);
@@ -147,24 +150,7 @@ function DetalhesProva() {
           </Card>
         ) : null}
 
-        {exam.examType === "recuperacao" ? (
-          <Card>
-            <CardHeader><CardTitle className="text-base">Origem da recuperação</CardTitle></CardHeader>
-            <CardContent>
-              {previousExam ? (
-                <div className="space-y-2 text-sm">
-                  <p>{previousExam.studentName} — {previousExam.module}</p>
-                  <p className="text-muted-foreground">Prova anterior em {previousExam.examDate}, status: {previousExam.status}.</p>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/laboratorio/provas/$id" params={{ id: previousExam.id }}>Ver prova anterior</Link>
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">A prova anterior não foi encontrada.</p>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
+        <ExamAttemptTimeline exam={exam} exams={exams} />
       </div>
 
       <ConfirmationDialog
