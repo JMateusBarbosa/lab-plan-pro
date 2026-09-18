@@ -183,6 +183,7 @@ export interface FileRouteTypes {
     | '/laboratorio/provas/'
     | '/admin/laboratorios/$id/editar'
     | '/laboratorio/provas/$id/editar'
+    | '/laboratorio/provas/$id/proxima'
     | '/admin/laboratorios/$id/'
     | '/laboratorio/provas/$id/'
   fileRoutesByTo: FileRoutesByTo
@@ -200,6 +201,7 @@ export interface FileRouteTypes {
     | '/laboratorio/provas'
     | '/admin/laboratorios/$id/editar'
     | '/laboratorio/provas/$id/editar'
+    | '/laboratorio/provas/$id/proxima'
     | '/admin/laboratorios/$id'
     | '/laboratorio/provas/$id'
   id:
@@ -217,6 +219,7 @@ export interface FileRouteTypes {
     | '/laboratorio/provas/'
     | '/admin/laboratorios/$id/editar'
     | '/laboratorio/provas/$id/editar'
+    | '/laboratorio/provas/$id/proxima'
     | '/admin/laboratorios/$id/'
     | '/laboratorio/provas/$id/'
   fileRoutesById: FileRoutesById
