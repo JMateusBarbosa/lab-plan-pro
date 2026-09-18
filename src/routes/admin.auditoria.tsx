@@ -28,6 +28,14 @@ import {
 } from "@/components/ui/table";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
+  auditActionLabels,
+  auditEntityLabels,
+  formatAuditDateTime,
+  formatAuditValue,
+  getAuditChangedFields,
+} from "@/lib/admin-audit-format";
+import { downloadAuditPdf } from "@/lib/admin-audit-pdf";
+import {
   listAllFilteredAuditLogs,
   type AuditLogRecord,
 } from "@/lib/admin-audit-api";
@@ -49,80 +57,6 @@ export const Route = createFileRoute("/admin/auditoria")({
 
 const PAGE_SIZE = 20;
 
-const actionLabels: Record<string, string> = {
-  insert: "Criação",
-  update: "Atualização",
-  soft_delete: "Exclusão",
-  restore: "Restauração",
-  admin_update: "Atualização administrativa",
-  status_change: "Alteração de status",
-  provision: "Provisionamento",
-};
-
-const entityLabels: Record<string, string> = {
-  exam: "Prova",
-  laboratory: "Laboratório",
-};
-
-const fieldLabels: Record<string, string> = {
-  id: "ID",
-  student_name: "Aluno",
-  module: "Módulo",
-  pc_number: "Computador",
-  exam_date: "Data da prova",
-  student_class_time: "Horário",
-  exam_type: "Tipo de prova",
-  status: "Status",
-  previous_exam_id: "Prova anterior",
-  laboratory_id: "Laboratório",
-  name: "Nome",
-  school_name: "Escola",
-  city: "Cidade",
-  state: "UF",
-  responsible: "Responsável",
-  phone: "Telefone",
-  computer_count: "Computadores",
-  deleted_at: "Excluída em",
-  deleted_by: "Excluída por",
-  created_at: "Criado em",
-  updated_at: "Atualizado em",
-};
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "medium",
-    timeZone: "America/Manaus",
-  }).format(new Date(value));
-}
-
-function toObject(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-}
-
-function formatValue(value: unknown) {
-  if (value == null || value === "") return "—";
-  if (typeof value === "boolean") return value ? "Sim" : "Não";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-}
-
-function changedFields(record: AuditLogRecord) {
-  const before = toObject(record.beforeData) ?? {};
-  const after = toObject(record.afterData) ?? {};
-  const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
-
-  return keys
-    .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
-    .map((key) => ({
-      key,
-      label: fieldLabels[key] ?? key,
-      before: before[key],
-      after: after[key],
-    }));
-}
-
 function csvCell(value: unknown) {
   const text = value == null ? "" : typeof value === "string" ? value : JSON.stringify(value);
   const safeText = /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text;
@@ -142,7 +76,7 @@ function downloadCsv(filename: string, content: string) {
 }
 
 function AuditDiff({ record }: { record: AuditLogRecord }) {
-  const changes = changedFields(record);
+  const changes = getAuditChangedFields(record);
 
   if (changes.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhuma alteração de campo foi identificada neste evento.</p>;
@@ -162,8 +96,8 @@ function AuditDiff({ record }: { record: AuditLogRecord }) {
           {changes.map((change) => (
             <TableRow key={change.key}>
               <TableCell className="font-medium">{change.label}</TableCell>
-              <TableCell className="max-w-64 break-words text-sm text-muted-foreground">{formatValue(change.before)}</TableCell>
-              <TableCell className="max-w-64 break-words text-sm">{formatValue(change.after)}</TableCell>
+              <TableCell className="max-w-64 break-words text-sm text-muted-foreground">{formatAuditValue(change.before)}</TableCell>
+              <TableCell className="max-w-64 break-words text-sm">{formatAuditValue(change.after)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -183,7 +117,7 @@ function AdminAuditPage() {
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AuditLogRecord | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"csv" | "pdf" | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -232,25 +166,28 @@ function AdminAuditPage() {
     setExportMessage(null);
   };
 
-  const handleExport = async () => {
-    setIsExporting(true);
+  const getExportRecords = () =>
+    listAllFilteredAuditLogs({
+      action: filters.action,
+      entityType: filters.entityType,
+      laboratoryId: filters.laboratoryId,
+      actorUserId: filters.actorUserId,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      search: filters.search,
+    });
+
+  const handleCsvExport = async () => {
+    setExportingFormat("csv");
     setExportMessage(null);
     try {
-      const { records, total, truncated } = await listAllFilteredAuditLogs({
-        action: filters.action,
-        entityType: filters.entityType,
-        laboratoryId: filters.laboratoryId,
-        actorUserId: filters.actorUserId,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        search: filters.search,
-      });
+      const { records, total, truncated } = await getExportRecords();
 
       const header = ["Data/Hora", "Ação", "Entidade", "Laboratório", "Ator", "Papel", "ID da entidade", "Antes", "Depois"];
       const rows = records.map((record) => [
-        formatDateTime(record.createdAt),
-        actionLabels[record.action] ?? record.action,
-        entityLabels[record.entityType] ?? record.entityType,
+        formatAuditDateTime(record.createdAt),
+        auditActionLabels[record.action] ?? record.action,
+        auditEntityLabels[record.entityType] ?? record.entityType,
         record.laboratoryName ?? "",
         record.actorEmail ?? record.actorUserId ?? "Sistema",
         record.actorRole ?? "",
@@ -269,7 +206,45 @@ function AdminAuditPage() {
     } catch {
       setExportMessage("Não foi possível exportar a auditoria.");
     } finally {
-      setIsExporting(false);
+      setExportingFormat(null);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    setExportingFormat("pdf");
+    setExportMessage(null);
+
+    try {
+      const { records, total, truncated } = await getExportRecords();
+      const selectedLaboratory = laboratories.find(
+        ({ laboratory }) => laboratory.id === filters.laboratoryId,
+      )?.laboratory;
+      const selectedActor = actors.find((actor) => actor.id === filters.actorUserId);
+
+      downloadAuditPdf(
+        records,
+        {
+          action: filters.action,
+          entityType: filters.entityType,
+          laboratoryName: selectedLaboratory?.name,
+          actorEmail: selectedActor?.email,
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          search: filters.search,
+        },
+        total,
+        truncated,
+      );
+
+      setExportMessage(
+        truncated
+          ? `PDF gerado com os primeiros ${records.length} de ${total} eventos.`
+          : `PDF gerado com ${records.length} evento${records.length === 1 ? "" : "s"}.`,
+      );
+    } catch {
+      setExportMessage("Não foi possível gerar o PDF da auditoria.");
+    } finally {
+      setExportingFormat(null);
     }
   };
 
@@ -283,9 +258,22 @@ function AdminAuditPage() {
               Histórico imutável das alterações registradas pelo sistema.
             </p>
           </div>
-          <Button variant="outline" onClick={() => void handleExport()} disabled={isExporting || !data?.total}>
-            {isExporting ? "Exportando..." : "Exportar CSV"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => void handleCsvExport()}
+              disabled={exportingFormat !== null || !data?.total}
+            >
+              {exportingFormat === "csv" ? "Exportando CSV..." : "Exportar CSV"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void handlePdfExport()}
+              disabled={exportingFormat !== null || !data?.total}
+            >
+              {exportingFormat === "pdf" ? "Gerando PDF..." : "Exportar PDF"}
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -301,7 +289,7 @@ function AdminAuditPage() {
               <SelectTrigger><SelectValue placeholder="Ação" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todas as ações</SelectItem>
-                {Object.entries(actionLabels).map(([value, label]) => (
+                {Object.entries(auditActionLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
               </SelectContent>
@@ -374,9 +362,9 @@ function AdminAuditPage() {
                 <TableBody>
                   {data.records.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="whitespace-nowrap">{formatDateTime(record.createdAt)}</TableCell>
-                      <TableCell><Badge variant="secondary">{actionLabels[record.action] ?? record.action}</Badge></TableCell>
-                      <TableCell>{entityLabels[record.entityType] ?? record.entityType}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatAuditDateTime(record.createdAt)}</TableCell>
+                      <TableCell><Badge variant="secondary">{auditActionLabels[record.action] ?? record.action}</Badge></TableCell>
+                      <TableCell>{auditEntityLabels[record.entityType] ?? record.entityType}</TableCell>
                       <TableCell>{record.laboratoryName ?? "—"}</TableCell>
                       <TableCell className="max-w-56 truncate" title={record.actorEmail ?? undefined}>
                         {record.actorEmail ?? (record.actorRole === "admin" ? "Administrador" : record.actorRole === "laboratory" ? "Laboratório" : "Sistema")}
@@ -410,13 +398,13 @@ function AdminAuditPage() {
           <DialogHeader>
             <DialogTitle>Detalhes do evento</DialogTitle>
             <DialogDescription>
-              {selected ? `${actionLabels[selected.action] ?? selected.action} · ${formatDateTime(selected.createdAt)}` : ""}
+              {selected ? `${auditActionLabels[selected.action] ?? selected.action} · ${formatAuditDateTime(selected.createdAt)}` : ""}
             </DialogDescription>
           </DialogHeader>
           {selected ? (
             <div className="space-y-5">
               <div className="grid gap-3 rounded-md border p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div><span className="text-muted-foreground">Entidade</span><p className="font-medium">{entityLabels[selected.entityType] ?? selected.entityType}</p></div>
+                <div><span className="text-muted-foreground">Entidade</span><p className="font-medium">{auditEntityLabels[selected.entityType] ?? selected.entityType}</p></div>
                 <div><span className="text-muted-foreground">Ator</span><p className="break-all font-medium">{selected.actorEmail ?? selected.actorUserId ?? "Sistema"}</p></div>
                 <div><span className="text-muted-foreground">Laboratório</span><p className="font-medium">{selected.laboratoryName ?? "—"}</p></div>
                 <div><span className="text-muted-foreground">ID da entidade</span><p className="break-all font-mono text-xs">{selected.entityId ?? "—"}</p></div>
