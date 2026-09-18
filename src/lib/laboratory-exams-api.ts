@@ -111,6 +111,18 @@ export async function createLaboratoryExam(laboratoryId: string, values: ExamFor
   return mapExam(data);
 }
 
+export async function updateLaboratoryExamStatus(id: string, status: Exam["status"]): Promise<Exam> {
+  const { data, error } = await supabase
+    .from("exams")
+    .update({ status })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(translateExamError(error));
+  return mapExam(data);
+}
+
 export async function updateLaboratoryExam(id: string, values: ExamFormValues): Promise<Exam> {
   const { data, error } = await supabase
     .from("exams")
