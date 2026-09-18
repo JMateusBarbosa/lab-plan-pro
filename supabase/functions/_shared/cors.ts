@@ -6,8 +6,6 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
 ];
 
-const VERCEL_PREVIEW_PREFIXES = ["labs-sistema", "lab-plan-pro"];
-
 function configuredOrigins() {
   const extra = Deno.env.get("ALLOWED_ORIGINS")
     ?.split(",")
@@ -17,24 +15,9 @@ function configuredOrigins() {
   return new Set([...(extra ?? []), ...DEFAULT_ALLOWED_ORIGINS]);
 }
 
-function isAllowedVercelPreview(origin: string) {
-  try {
-    const url = new URL(origin);
-    if (url.protocol !== "https:" || !url.hostname.endsWith(".vercel.app")) return false;
-
-    return VERCEL_PREVIEW_PREFIXES.some(
-      (prefix) =>
-        url.hostname === `${prefix}.vercel.app` ||
-        url.hostname.startsWith(`${prefix}-`),
-    );
-  } catch {
-    return false;
-  }
-}
-
 export function isOriginAllowed(origin: string | null) {
   if (!origin) return true;
-  return configuredOrigins().has(origin) || isAllowedVercelPreview(origin);
+  return configuredOrigins().has(origin);
 }
 
 export function corsHeadersForRequest(req: Request) {
