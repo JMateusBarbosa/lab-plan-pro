@@ -154,18 +154,22 @@ export function ExamForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Tipo da prova *</Label>
-            <Select disabled={submitting} value={values.examType} onValueChange={(v) => handleTypeChange(v as ExamFormValues["examType"])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(examTypeLabels) as Array<keyof typeof examTypeLabels>).map((type) => (
-                  <SelectItem key={type} value={type}>{examTypeLabels[type]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Tipo da prova</Label>
+            {mode === "create" ? (
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium">P1</div>
+            ) : (
+              <Select disabled={submitting} value={values.examType} onValueChange={(v) => handleTypeChange(v as ExamFormValues["examType"])}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(examTypeLabels) as Array<keyof typeof examTypeLabels>).map((type) => (
+                    <SelectItem key={type} value={type}>{examTypeLabels[type]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          {values.examType === "recuperacao" ? (
+          {mode === "edit" && values.examType === "recuperacao" ? (
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Prova anterior *</Label>
               <Select
