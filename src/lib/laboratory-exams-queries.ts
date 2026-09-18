@@ -5,8 +5,9 @@ import {
   getLaboratoryExam,
   listLaboratoryExams,
   updateLaboratoryExam,
+  updateLaboratoryExamStatus,
 } from "@/lib/laboratory-exams-api";
-import type { ExamFormValues } from "@/types/exam";
+import type { Exam, ExamFormValues } from "@/types/exam";
 
 export const laboratoryExamsKey = ["laboratory", "exams"] as const;
 
@@ -34,6 +35,20 @@ export function useCreateLaboratoryExamMutation(laboratoryId: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: laboratoryExamsKey }),
         queryClient.invalidateQueries({ queryKey: [...laboratoryExamsKey, exam.id] }),
+      ]);
+    },
+  });
+}
+
+export function useUpdateLaboratoryExamStatusMutation(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (status: Exam["status"]) => updateLaboratoryExamStatus(id, status),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: laboratoryExamsKey }),
+        queryClient.invalidateQueries({ queryKey: [...laboratoryExamsKey, id] }),
       ]);
     },
   });
