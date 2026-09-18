@@ -49,7 +49,7 @@ export function ExamCard({ exam, exams, onDelete }: ExamCardProps) {
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          {exam.status === "pendente" ? <ExamResultDialog exam={exam} exams={exams} /> : null}
+          <ExamResultDialog exam={exam} exams={exams} />
           {canScheduleNext ? (
             <Button asChild size="sm">
               <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>
