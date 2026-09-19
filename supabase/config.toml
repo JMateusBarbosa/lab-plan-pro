@@ -19,7 +19,14 @@ port = 54323
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3000/redefinir-senha",
+  "http://localhost:3000/redefinir-senha",
+  "http://localhost:5173/redefinir-senha",
+  "http://localhost:8080/redefinir-senha",
+  "https://labs-sistema.vercel.app/redefinir-senha",
+]
 jwt_expiry = 3600
 enable_signup = false
 
