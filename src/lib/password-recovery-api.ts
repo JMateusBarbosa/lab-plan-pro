@@ -3,6 +3,27 @@ import { hasStrongPassword, PASSWORD_POLICY_MESSAGE } from "@/lib/password-polic
 
 export type RecoveryAccountRole = "admin" | "laboratory" | null;
 
+const RECOVERY_SESSION_KEY = "lab-plan-password-recovery";
+
+function isRecoveryCallbackUrl() {
+  if (typeof window === "undefined") return false;
+
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const queryParams = new URLSearchParams(window.location.search);
+
+  return hashParams.get("type") === "recovery" || queryParams.get("type") === "recovery";
+}
+
+function markRecoverySession() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(RECOVERY_SESSION_KEY, "1");
+}
+
+function clearRecoverySessionMarker() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(RECOVERY_SESSION_KEY);
+}
+
 export async function requestPasswordRecovery(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -26,20 +47,37 @@ export async function requestPasswordRecovery(email: string) {
 
 export async function hasRecoverySession() {
   const { data, error } = await supabase.auth.getSession();
-  if (error) return false;
-  return Boolean(data.session);
+  if (error || !data.session) return false;
+
+  if (isRecoveryCallbackUrl()) {
+    markRecoverySession();
+    return true;
+  }
+
+  return (
+    typeof window !== "undefined" &&
+    window.sessionStorage.getItem(RECOVERY_SESSION_KEY) === "1"
+  );
 }
 
 export function subscribeToRecoverySession(onReady: () => void) {
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((event, session) => {
+    if (!session) return;
+
+    if (event === "PASSWORD_RECOVERY") {
+      markRecoverySession();
+      onReady();
+      return;
+    }
+
     if (
-      session &&
-      (event === "PASSWORD_RECOVERY" ||
-        event === "INITIAL_SESSION" ||
+      (event === "INITIAL_SESSION" ||
         event === "SIGNED_IN" ||
-        event === "TOKEN_REFRESHED")
+        event === "TOKEN_REFRESHED") &&
+      typeof window !== "undefined" &&
+      window.sessionStorage.getItem(RECOVERY_SESSION_KEY) === "1"
     ) {
       onReady();
     }
@@ -84,6 +122,8 @@ export async function completePasswordRecovery(password: string) {
 
     throw new Error("Não foi possível atualizar a senha. Solicite um novo link e tente novamente.");
   }
+
+  clearRecoverySessionMarker();
 
   // Encerra a sessão temporária de recuperação e demais refresh tokens.
   // Access tokens antigos podem permanecer válidos até o próprio vencimento.
