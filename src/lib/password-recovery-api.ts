@@ -1,28 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { hasStrongPassword, PASSWORD_POLICY_MESSAGE } from "@/lib/password-policy";
+import {
+  clearPasswordRecoveryContext,
+  hasPasswordRecoveryContext,
+  markPasswordRecoveryContext,
+} from "@/lib/password-recovery-context";
 
 export type RecoveryAccountRole = "admin" | "laboratory" | null;
-
-const RECOVERY_SESSION_KEY = "lab-plan-password-recovery";
-
-function isRecoveryCallbackUrl() {
-  if (typeof window === "undefined") return false;
-
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const queryParams = new URLSearchParams(window.location.search);
-
-  return hashParams.get("type") === "recovery" || queryParams.get("type") === "recovery";
-}
-
-function markRecoverySession() {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(RECOVERY_SESSION_KEY, "1");
-}
-
-function clearRecoverySessionMarker() {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(RECOVERY_SESSION_KEY);
-}
 
 export async function requestPasswordRecovery(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
@@ -46,18 +30,12 @@ export async function requestPasswordRecovery(email: string) {
 }
 
 export async function hasRecoverySession() {
+  if (!hasPasswordRecoveryContext()) return false;
+
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) return false;
 
-  if (isRecoveryCallbackUrl()) {
-    markRecoverySession();
-    return true;
-  }
-
-  return (
-    typeof window !== "undefined" &&
-    window.sessionStorage.getItem(RECOVERY_SESSION_KEY) === "1"
-  );
+  return true;
 }
 
 export function subscribeToRecoverySession(onReady: () => void) {
@@ -67,7 +45,7 @@ export function subscribeToRecoverySession(onReady: () => void) {
     if (!session) return;
 
     if (event === "PASSWORD_RECOVERY") {
-      markRecoverySession();
+      markPasswordRecoveryContext();
       onReady();
       return;
     }
@@ -76,8 +54,7 @@ export function subscribeToRecoverySession(onReady: () => void) {
       (event === "INITIAL_SESSION" ||
         event === "SIGNED_IN" ||
         event === "TOKEN_REFRESHED") &&
-      typeof window !== "undefined" &&
-      window.sessionStorage.getItem(RECOVERY_SESSION_KEY) === "1"
+      hasPasswordRecoveryContext()
     ) {
       onReady();
     }
@@ -123,11 +100,29 @@ export async function completePasswordRecovery(password: string) {
     throw new Error("Não foi possível atualizar a senha. Solicite um novo link e tente novamente.");
   }
 
-  clearRecoverySessionMarker();
+  // Encerra as sessões e confirma que a sessão local realmente foi removida.
+  // O método signOut resolve com { error }, então o retorno precisa ser inspecionado.
+  const { error: globalSignOutError } = await supabase.auth.signOut({ scope: "global" });
+  const { data: sessionAfterGlobal } = await supabase.auth.getSession();
 
-  // Encerra a sessão temporária de recuperação e demais refresh tokens.
-  // Access tokens antigos podem permanecer válidos até o próprio vencimento.
-  await supabase.auth.signOut({ scope: "global" }).catch(() => undefined);
+  if (globalSignOutError || sessionAfterGlobal.session) {
+    const { error: localSignOutError } = await supabase.auth.signOut({ scope: "local" });
+
+    if (localSignOutError) {
+      throw new Error(
+        "A senha foi atualizada, mas não foi possível encerrar a sessão com segurança. Feche esta aba e entre novamente.",
+      );
+    }
+  }
+
+  const { data: finalSession, error: finalSessionError } = await supabase.auth.getSession();
+  if (finalSessionError || finalSession.session) {
+    throw new Error(
+      "A senha foi atualizada, mas a sessão ainda está ativa. Feche esta aba e entre novamente.",
+    );
+  }
+
+  clearPasswordRecoveryContext();
 
   return role;
 }
