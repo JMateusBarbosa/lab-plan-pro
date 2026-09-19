@@ -79,6 +79,9 @@ function AdminLogin() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Entrando..." : "Entrar"}
             </Button>
+            <Button asChild variant="link" className="w-full">
+              <Link to="/recuperar-senha">Esqueci minha senha</Link>
+            </Button>
             <Button asChild variant="ghost" className="w-full">
               <Link to="/">Voltar</Link>
             </Button>

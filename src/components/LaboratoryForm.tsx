@@ -22,6 +22,7 @@ import {
   dayOfWeekLabels,
   type LaboratoryScheduleInput,
 } from "@/types/laboratory-schedule";
+import { hasStrongPassword, PASSWORD_POLICY_MESSAGE } from "@/lib/password-policy";
 
 interface LaboratoryFormProps {
   mode: "create" | "edit";
@@ -36,19 +37,6 @@ interface LaboratoryFormProps {
   ) => void | Promise<void>;
   onCancel: () => void;
   onResetPassword?: () => void;
-}
-
-const PASSWORD_POLICY_MESSAGE =
-  "A senha provisória deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
-
-function hasStrongPassword(password: string) {
-  return (
-    password.length >= 12 &&
-    /[a-z]/.test(password) &&
-    /[A-Z]/.test(password) &&
-    /\d/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
-  );
 }
 
 const emptyValues: LaboratoryFormValues = {
