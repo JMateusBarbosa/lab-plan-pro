@@ -1,12 +1,8 @@
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://labs-sistema.vercel.app",
-  "http://localhost:3000",
-  "http://localhost:5173",
   "http://localhost:8080",
-  "http://127.0.0.1:3000",
-  "http://127.0.0.1:5173",
   "http://127.0.0.1:8080",
   "http://192.168.56.1:8080",
+  "http://10.235.226.58:8080",
 ];
 
 function configuredOrigins() {
