@@ -301,6 +301,7 @@ function AdminAuditPage() {
                 <SelectItem value="todos">Todas as entidades</SelectItem>
                 <SelectItem value="exam">Prova</SelectItem>
                 <SelectItem value="laboratory">Laboratório</SelectItem>
+                <SelectItem value="laboratory_account">Conta do laboratório</SelectItem>
               </SelectContent>
             </Select>
 
