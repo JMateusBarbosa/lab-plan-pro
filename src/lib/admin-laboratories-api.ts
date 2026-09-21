@@ -302,3 +302,44 @@ export async function toggleLaboratoryStatus(id: string, currentStatus: Laborato
   if (data?.error) throw new Error(data.error);
   return nextStatus;
 }
+
+
+export async function updateLaboratoryAccessEmail(id: string, email: string) {
+  const { data, error } = await supabase.functions.invoke("manage-laboratory-credentials", {
+    body: {
+      operation: "update_email",
+      laboratoryId: id,
+      email,
+    },
+  });
+
+  if (error) {
+    await throwFunctionError(error, "Não foi possível alterar o e-mail de acesso.");
+  }
+  if (data?.error) throw new Error(data.error);
+
+  return data as { laboratoryId: string; userId: string; email: string };
+}
+
+export async function resetLaboratoryAccessPassword(id: string, password: string) {
+  const { data, error } = await supabase.functions.invoke("manage-laboratory-credentials", {
+    body: {
+      operation: "reset_password",
+      laboratoryId: id,
+      password,
+    },
+  });
+
+  if (error) {
+    await throwFunctionError(error, "Não foi possível redefinir a senha de acesso.");
+  }
+  if (data?.error) throw new Error(data.error);
+
+  return data as {
+    laboratoryId: string;
+    userId: string;
+    passwordChanged?: boolean;
+    success?: boolean;
+    warning?: string;
+  };
+}

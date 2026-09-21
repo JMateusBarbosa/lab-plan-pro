@@ -4,8 +4,10 @@ import {
   getAdminLaboratory,
   listAdminLaboratories,
   provisionLaboratory,
+  resetLaboratoryAccessPassword,
   toggleLaboratoryStatus,
   updateLaboratory,
+  updateLaboratoryAccessEmail,
 } from "@/lib/admin-laboratories-api";
 import type { LaboratoryFormValues, LaboratoryAccessFormValues } from "@/types/laboratory";
 import type { LaboratoryScheduleInput } from "@/types/laboratory-schedule";
@@ -90,6 +92,34 @@ export function useToggleLaboratoryStatusMutation() {
         queryClient.invalidateQueries({ queryKey: [...adminLaboratoriesKey, variables.id] }),
         queryClient.invalidateQueries({ queryKey: adminDashboardKey }),
       ]);
+    },
+  });
+}
+
+
+export function useUpdateLaboratoryAccessEmailMutation(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (email: string) => updateLaboratoryAccessEmail(id, email),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminLaboratoriesKey }),
+        queryClient.invalidateQueries({ queryKey: [...adminLaboratoriesKey, id] }),
+        queryClient.invalidateQueries({ queryKey: adminDashboardKey }),
+        queryClient.invalidateQueries({ queryKey: ["admin", "audit"] }),
+      ]);
+    },
+  });
+}
+
+export function useResetLaboratoryAccessPasswordMutation(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (password: string) => resetLaboratoryAccessPassword(id, password),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "audit"] });
     },
   });
 }

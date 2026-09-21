@@ -74,3 +74,4 @@ jobs:
           supabase/functions/provision-laboratory/index.ts
           supabase/functions/update-laboratory/index.ts
           supabase/functions/set-laboratory-status/index.ts
+          supabase/functions/manage-laboratory-credentials/index.ts

@@ -119,7 +119,14 @@ function DetalhesLaboratorio() {
 
         <Card>
           <CardHeader><CardTitle className="text-base">Conta de acesso</CardTitle></CardHeader>
-          <CardContent><Info label="E-mail/login" value={accessEmail} /></CardContent>
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <Info label="E-mail/login" value={accessEmail} />
+            <Button asChild variant="outline">
+              <Link to="/admin/laboratorios/$id/credenciais" params={{ id: lab.id }}>
+                Gerenciar credenciais
+              </Link>
+            </Button>
+          </CardContent>
         </Card>
 
         <Card>
