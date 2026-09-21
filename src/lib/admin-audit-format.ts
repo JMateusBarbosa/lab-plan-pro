@@ -13,10 +13,13 @@ export const auditActionLabels: Record<string, string> = {
 export const auditEntityLabels: Record<string, string> = {
   exam: "Prova",
   laboratory: "Laboratório",
+  laboratory_account: "Conta do laboratório",
 };
 
 export const auditFieldLabels: Record<string, string> = {
   id: "ID",
+  email: "E-mail",
+  password_changed: "Senha alterada",
   student_name: "Aluno",
   module: "Módulo",
   pc_number: "Computador",
