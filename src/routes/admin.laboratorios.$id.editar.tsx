@@ -72,7 +72,9 @@ function EditarLaboratorio() {
           initialAccess={{ email: accessEmail }}
           initialSchedules={initialSchedules}
           submitting={update.isPending}
-          onResetPassword={() => toast.info("A redefinição de senha será tratada no gerenciamento da conta de acesso.")}
+          onResetPassword={() =>
+            navigate({ to: "/admin/laboratorios/$id/credenciais", params: { id } })
+          }
           onCancel={() => navigate({ to: "/admin/laboratorios/$id", params: { id } })}
           onSubmit={async (values, _access, nextSchedules) => {
             if (update.isPending) return;
