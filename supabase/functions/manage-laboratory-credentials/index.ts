@@ -218,16 +218,64 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: PASSWORD_POLICY_MESSAGE }, 400);
   }
 
+  const passwordResetRequestId = crypto.randomUUID();
+
+  // Registra a intenção antes da alteração irreversível. A senha nunca entra no log.
+  const { error: intentAuditError } = await service.from("audit_logs").insert({
+    actor_user_id: caller.id,
+    actor_role: "admin",
+    laboratory_id: payload.laboratoryId,
+    action: "admin_update",
+    entity_type: "laboratory_account",
+    entity_id: accountProfile.id,
+    before_data: null,
+    after_data: { password_reset_requested: true },
+    metadata: {
+      operation: "password_reset_requested",
+      request_id: passwordResetRequestId,
+    },
+  });
+
+  if (intentAuditError) {
+    return jsonResponse(
+      {
+        error:
+          "Não foi possível registrar a solicitação na auditoria. A senha não foi alterada.",
+      },
+      500,
+    );
+  }
+
   const { error: passwordError } = await service.auth.admin.updateUserById(
     accountProfile.id,
     { password: payload.password },
   );
 
   if (passwordError) {
+    await service.from("audit_logs").insert({
+      actor_user_id: caller.id,
+      actor_role: "admin",
+      laboratory_id: payload.laboratoryId,
+      action: "admin_update",
+      entity_type: "laboratory_account",
+      entity_id: accountProfile.id,
+      before_data: { password_changed: false },
+      after_data: { password_changed: false },
+      metadata: {
+        operation: "password_reset_failed",
+        request_id: passwordResetRequestId,
+      },
+    });
+
     return jsonResponse({ error: translateAuthError(passwordError.message) }, 400);
   }
 
-  const { error: auditError } = await service.from("audit_logs").insert({
+  const { data: revokedSessions, error: revokeSessionsError } = await service.rpc(
+    "admin_revoke_auth_sessions",
+    { p_user_id: accountProfile.id },
+  );
+
+  const { error: completionAuditError } = await service.from("audit_logs").insert({
     actor_user_id: caller.id,
     actor_role: "admin",
     laboratory_id: payload.laboratoryId,
@@ -235,20 +283,36 @@ Deno.serve(async (req) => {
     entity_type: "laboratory_account",
     entity_id: accountProfile.id,
     before_data: { password_changed: false },
-    after_data: { password_changed: true },
-    metadata: { operation: "password_reset" },
+    after_data: {
+      password_changed: true,
+      sessions_revoked: !revokeSessionsError,
+    },
+    metadata: {
+      operation: revokeSessionsError
+        ? "password_reset_session_revoke_failed"
+        : "password_reset_completed",
+      request_id: passwordResetRequestId,
+      revoked_sessions: revokeSessionsError ? null : Number(revokedSessions ?? 0),
+    },
   });
 
-  if (auditError) {
+  if (revokeSessionsError) {
     return jsonResponse(
       {
-        success: true,
-        warning:
-          "A senha foi redefinida, mas não foi possível registrar esta ação na auditoria. Verifique os logs administrativos.",
-        laboratoryId: payload.laboratoryId,
-        userId: accountProfile.id,
+        error:
+          "A senha foi alterada, mas não foi possível encerrar todas as sessões existentes. Verifique a conta antes de continuar.",
       },
-      200,
+      500,
+    );
+  }
+
+  if (completionAuditError) {
+    return jsonResponse(
+      {
+        error:
+          "A senha foi alterada e as sessões foram revogadas, mas não foi possível registrar a conclusão na auditoria. A solicitação inicial permanece registrada.",
+      },
+      500,
     );
   }
 
@@ -256,5 +320,6 @@ Deno.serve(async (req) => {
     laboratoryId: payload.laboratoryId,
     userId: accountProfile.id,
     passwordChanged: true,
+    sessionsRevoked: Number(revokedSessions ?? 0),
   });
 });
