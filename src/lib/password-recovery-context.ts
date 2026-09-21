@@ -36,7 +36,14 @@ export function clearPasswordRecoveryContext() {
  * o contexto caso PASSWORD_RECOVERY seja emitido antes da montagem da rota.
  */
 export function capturePasswordRecoveryContextFromUrl() {
-  if (isPasswordRecoveryCallbackUrl()) {
-    markPasswordRecoveryContext();
+  if (!isPasswordRecoveryCallbackUrl()) return;
+
+  markPasswordRecoveryContext();
+
+  if (typeof window === "undefined" || window.location.pathname === "/redefinir-senha") {
+    return;
   }
+
+  const nextUrl = `/redefinir-senha${window.location.search}${window.location.hash}`;
+  window.history.replaceState(window.history.state, "", nextUrl);
 }
