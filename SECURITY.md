@@ -62,6 +62,8 @@ Alterações são realizadas por:
 
 As funções validam que o chamador possui `profiles.role = admin` e utilizam Service Role somente no ambiente server-side.
 
+O gerenciamento de credenciais da conta do laboratório é separado da edição cadastral. Alterações de e-mail/login e redefinições administrativas de senha passam pela Edge Function `manage-laboratory-credentials`. Senhas nunca entram em `audit_logs`; a auditoria registra apenas que a senha foi alterada.
+
 A alteração de laboratório e horários é executada pela RPC `admin_update_laboratory_config()` em uma única transação PostgreSQL. Não deve voltar a existir sequência de `UPDATE` + `DELETE` + `INSERT` com rollback compensatório no navegador/Edge Function.
 
 A alteração de status usa `admin_set_laboratory_status()` e grava auditoria na mesma transação.
