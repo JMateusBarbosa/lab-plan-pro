@@ -20,6 +20,8 @@ export const auditFieldLabels: Record<string, string> = {
   id: "ID",
   email: "E-mail",
   password_changed: "Senha alterada",
+  password_reset_requested: "Redefinição solicitada",
+  sessions_revoked: "Sessões revogadas",
   student_name: "Aluno",
   module: "Módulo",
   pc_number: "Computador",
