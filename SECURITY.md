@@ -163,9 +163,10 @@ O `connect-src` permite somente a própria origem e o projeto Supabase configura
 
 As Edge Functions administrativas não usam `Access-Control-Allow-Origin: *`. O CORS aceita explicitamente:
 
-- `https://labs-sistema.vercel.app`;
-- origens locais de desenvolvimento conhecidas;
+- origens locais de desenvolvimento conhecidas do projeto atual;
 - origens extras fornecidas por `ALLOWED_ORIGINS` no ambiente server-side.
+
+Enquanto este sistema ainda não possuir um domínio de produção próprio, nenhuma origem de produção fica hardcoded na allowlist. Quando o novo frontend for publicado, o domínio definitivo deve ser adicionado explicitamente ao ambiente e aos testes antes do deploy.
 
 O header `x-idempotency-key` faz parte da allowlist CORS por ser utilizado no provisionamento administrativo.
 
