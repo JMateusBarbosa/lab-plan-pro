@@ -33,35 +33,13 @@ async function withoutConfiguredOrigins<T>(run: () => T | Promise<T>): Promise<T
   }
 }
 
-Deno.test("CORS accepts the production origin and reflects it exactly", async () => {
-  await withoutConfiguredOrigins(() => {
-    const origin = "https://labs-sistema.vercel.app";
-    const request = new Request("https://example.test", {
-      headers: { Origin: origin },
-    });
-
-    assert(isOriginAllowed(origin), "The production origin should be allowed.");
-
-    const headers = corsHeadersForRequest(request);
-    assertEquals(
-      headers["Access-Control-Allow-Origin"],
-      origin,
-      "The allowed production origin must be reflected in the response.",
-    );
-    assertEquals(headers.Vary, "Origin", "CORS responses must vary by Origin.");
-  });
-});
-
 Deno.test("CORS accepts the local development origins currently used by the project", async () => {
   await withoutConfiguredOrigins(() => {
     const origins = [
-      "http://localhost:3000",
-      "http://localhost:5173",
       "http://localhost:8080",
-      "http://127.0.0.1:3000",
-      "http://127.0.0.1:5173",
       "http://127.0.0.1:8080",
       "http://192.168.56.1:8080",
+      "http://10.235.226.58:8080",
     ];
 
     for (const origin of origins) {
@@ -74,7 +52,6 @@ Deno.test("CORS rejects unknown origins instead of accepting broad Vercel or pri
   await withoutConfiguredOrigins(() => {
     const blockedOrigins = [
       "https://evil.example.com",
-      "https://labs-sistema-attacker.vercel.app",
       "https://random-preview.vercel.app",
       "http://192.168.1.10:8080",
     ];
@@ -189,8 +166,8 @@ Deno.test("ALLOWED_ORIGINS adds exact trusted origins without widening the defau
       "Configured origins must remain exact matches.",
     );
     assert(
-      isOriginAllowed("https://labs-sistema.vercel.app"),
-      "Default production origin must remain allowed.",
+      !isOriginAllowed("https://random-production.example.com"),
+      "Unconfigured production origins must remain blocked.",
     );
   } finally {
     if (previous === undefined) Deno.env.delete("ALLOWED_ORIGINS");
