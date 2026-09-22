@@ -231,7 +231,7 @@ function CredenciaisLaboratorio() {
                   onChange={(event) => setPassword(event.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Use 12 ou mais caracteres, com maiúscula, minúscula, número e símbolo.
+                  Use 8 ou mais caracteres, com maiúscula, minúscula, número e símbolo.
                 </p>
               </div>
 
