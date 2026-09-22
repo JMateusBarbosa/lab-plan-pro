@@ -287,7 +287,7 @@ export function LaboratoryForm({
               <div>
                 {accessField("password", "Senha provisória", { required: true, type: "password" })}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Use 12 ou mais caracteres, com maiúscula, minúscula, número e símbolo.
+                  Use 8 ou mais caracteres, com maiúscula, minúscula, número e símbolo.
                 </p>
               </div>
               {accessField("confirmPassword", "Confirmar senha", { required: true, type: "password" })}

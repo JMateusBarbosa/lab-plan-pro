@@ -32,7 +32,7 @@ O provisionamento usa `x-idempotency-key` e a tabela server-only `admin_operatio
 
 Novas contas de laboratório exigem, no mínimo:
 
-- 12 caracteres;
+- 8 caracteres;
 - uma letra minúscula;
 - uma letra maiúscula;
 - um número;
@@ -43,7 +43,7 @@ A validação final ocorre na Edge Function, portanto não pode ser contornada a
 No projeto hosted, revisar em **Authentication > Sign In / Providers / Password security**:
 
 - manter o provedor de e-mail ativo para permitir login;
-- definir senha mínima de 12 caracteres;
+- definir senha mínima de 8 caracteres;
 - manter as proteções de alteração de senha/e-mail compatíveis com o fluxo do produto;
 - ativar `Leaked Password Protection` quando disponível no plano do Supabase.
 
@@ -62,7 +62,7 @@ Alterações são realizadas por:
 
 As funções validam que o chamador possui `profiles.role = admin` e utilizam Service Role somente no ambiente server-side.
 
-O gerenciamento de credenciais da conta do laboratório é separado da edição cadastral. Alterações de e-mail/login e redefinições administrativas de senha passam pela Edge Function `manage-laboratory-credentials`. Senhas nunca entram em `audit_logs`; a auditoria registra apenas que a senha foi alterada.
+O gerenciamento de credenciais da conta do laboratório é separado da edição cadastral. Alterações de e-mail/login e redefinições administrativas de senha passam pela Edge Function `manage-laboratory-credentials`. Alterações de e-mail e senha revogam as sessões persistidas da conta do laboratório. Senhas nunca entram em `audit_logs`; a auditoria registra apenas que a senha foi alterada.
 
 A alteração de laboratório e horários é executada pela RPC `admin_update_laboratory_config()` em uma única transação PostgreSQL. Não deve voltar a existir sequência de `UPDATE` + `DELETE` + `INSERT` com rollback compensatório no navegador/Edge Function.
 

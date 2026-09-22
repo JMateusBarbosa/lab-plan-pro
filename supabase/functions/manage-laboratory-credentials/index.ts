@@ -18,11 +18,11 @@ type CredentialPayload =
     };
 
 const PASSWORD_POLICY_MESSAGE =
-  "A nova senha deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
+  "A nova senha deve ter pelo menos 8 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
 
 function hasStrongPassword(password: string) {
   return (
-    password.length >= 12 &&
+    password.length >= 8 &&
     /[a-z]/.test(password) &&
     /[A-Z]/.test(password) &&
     /\d/.test(password) &&
@@ -158,6 +158,33 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "O novo e-mail é igual ao e-mail atual." }, 400);
     }
 
+    const emailChangeRequestId = crypto.randomUUID();
+
+    const { error: intentAuditError } = await service.from("audit_logs").insert({
+      actor_user_id: caller.id,
+      actor_role: "admin",
+      laboratory_id: payload.laboratoryId,
+      action: "admin_update",
+      entity_type: "laboratory_account",
+      entity_id: accountProfile.id,
+      before_data: null,
+      after_data: { email_change_requested: true },
+      metadata: {
+        operation: "email_change_requested",
+        request_id: emailChangeRequestId,
+      },
+    });
+
+    if (intentAuditError) {
+      return jsonResponse(
+        {
+          error:
+            "Não foi possível registrar a solicitação na auditoria. O e-mail não foi alterado.",
+        },
+        500,
+      );
+    }
+
     const { error: updateError } = await service.auth.admin.updateUserById(
       accountProfile.id,
       {
@@ -167,22 +194,30 @@ Deno.serve(async (req) => {
     );
 
     if (updateError) {
+      await service.from("audit_logs").insert({
+        actor_user_id: caller.id,
+        actor_role: "admin",
+        laboratory_id: payload.laboratoryId,
+        action: "admin_update",
+        entity_type: "laboratory_account",
+        entity_id: accountProfile.id,
+        before_data: { email: currentEmail },
+        after_data: { email: currentEmail },
+        metadata: {
+          operation: "email_change_failed",
+          request_id: emailChangeRequestId,
+        },
+      });
+
       return jsonResponse({ error: translateAuthError(updateError.message) }, 400);
     }
 
-    const { error: auditError } = await service.from("audit_logs").insert({
-      actor_user_id: caller.id,
-      actor_role: "admin",
-      laboratory_id: payload.laboratoryId,
-      action: "admin_update",
-      entity_type: "laboratory_account",
-      entity_id: accountProfile.id,
-      before_data: { email: currentEmail },
-      after_data: { email },
-      metadata: { operation: "email_change" },
-    });
+    const { data: revokedSessions, error: revokeSessionsError } = await service.rpc(
+      "admin_revoke_auth_sessions",
+      { p_user_id: accountProfile.id },
+    );
 
-    if (auditError) {
+    if (revokeSessionsError) {
       const { error: rollbackError } = await service.auth.admin.updateUserById(
         accountProfile.id,
         {
@@ -191,18 +226,67 @@ Deno.serve(async (req) => {
         },
       );
 
+      await service.from("audit_logs").insert({
+        actor_user_id: caller.id,
+        actor_role: "admin",
+        laboratory_id: payload.laboratoryId,
+        action: "admin_update",
+        entity_type: "laboratory_account",
+        entity_id: accountProfile.id,
+        before_data: { email: currentEmail },
+        after_data: { email: rollbackError ? email : currentEmail },
+        metadata: {
+          operation: rollbackError
+            ? "email_change_session_revoke_and_rollback_failed"
+            : "email_change_session_revoke_failed_rolled_back",
+          request_id: emailChangeRequestId,
+        },
+      });
+
       if (rollbackError) {
         return jsonResponse(
           {
             error:
-              "O e-mail foi alterado, mas houve falha ao registrar a auditoria e ao restaurar o valor anterior. Verifique a conta no Supabase antes de continuar.",
+              "O e-mail foi alterado, mas não foi possível encerrar as sessões nem restaurar o e-mail anterior. Verifique a conta no Supabase antes de continuar.",
           },
           500,
         );
       }
 
       return jsonResponse(
-        { error: "Não foi possível registrar a alteração com segurança. O e-mail anterior foi restaurado." },
+        {
+          error:
+            "Não foi possível encerrar as sessões da conta com segurança. O e-mail anterior foi restaurado.",
+        },
+        500,
+      );
+    }
+
+    const { error: completionAuditError } = await service.from("audit_logs").insert({
+      actor_user_id: caller.id,
+      actor_role: "admin",
+      laboratory_id: payload.laboratoryId,
+      action: "admin_update",
+      entity_type: "laboratory_account",
+      entity_id: accountProfile.id,
+      before_data: { email: currentEmail },
+      after_data: {
+        email,
+        sessions_revoked: true,
+      },
+      metadata: {
+        operation: "email_change_completed",
+        request_id: emailChangeRequestId,
+        revoked_sessions: Number(revokedSessions ?? 0),
+      },
+    });
+
+    if (completionAuditError) {
+      return jsonResponse(
+        {
+          error:
+            "O e-mail foi alterado e as sessões foram encerradas, mas não foi possível registrar a conclusão na auditoria. A solicitação inicial permanece registrada.",
+        },
         500,
       );
     }
@@ -211,6 +295,7 @@ Deno.serve(async (req) => {
       laboratoryId: payload.laboratoryId,
       userId: accountProfile.id,
       email,
+      sessionsRevoked: Number(revokedSessions ?? 0),
     });
   }
 
