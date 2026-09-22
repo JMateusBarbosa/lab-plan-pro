@@ -66,6 +66,7 @@ Edge Functions atuais:
 - `provision-laboratory`
 - `update-laboratory`
 - `set-laboratory-status`
+- `manage-laboratory-credentials`
 
 ## Variáveis de ambiente
 
@@ -81,7 +82,7 @@ Nunca coloque `SUPABASE_SERVICE_ROLE_KEY`, secret keys ou senhas no frontend. Ar
 - cadastro público de usuários não faz parte do produto;
 - o trigger de `auth.users` rejeita usuários que não tenham sido provisionados por um fluxo administrativo autorizado;
 - o primeiro administrador não é mais criado por uma tela pública;
-- novas contas de laboratório exigem senha provisória forte com pelo menos 12 caracteres, incluindo maiúscula, minúscula, número e símbolo;
+- novas contas de laboratório exigem senha provisória forte com pelo menos 8 caracteres, incluindo maiúscula, minúscula, número e símbolo;
 - a criação/recuperação de administradores deve ser feita somente por procedimento interno com acesso administrativo ao projeto;
 - configurações hosted do Supabase Auth, como proteção contra senhas vazadas, devem ser revisadas antes de produção. Consulte também `SECURITY.md`.
 
