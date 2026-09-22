@@ -158,6 +158,33 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "O novo e-mail é igual ao e-mail atual." }, 400);
     }
 
+    const emailChangeRequestId = crypto.randomUUID();
+
+    const { error: intentAuditError } = await service.from("audit_logs").insert({
+      actor_user_id: caller.id,
+      actor_role: "admin",
+      laboratory_id: payload.laboratoryId,
+      action: "admin_update",
+      entity_type: "laboratory_account",
+      entity_id: accountProfile.id,
+      before_data: null,
+      after_data: { email_change_requested: true },
+      metadata: {
+        operation: "email_change_requested",
+        request_id: emailChangeRequestId,
+      },
+    });
+
+    if (intentAuditError) {
+      return jsonResponse(
+        {
+          error:
+            "Não foi possível registrar a solicitação na auditoria. O e-mail não foi alterado.",
+        },
+        500,
+      );
+    }
+
     const { error: updateError } = await service.auth.admin.updateUserById(
       accountProfile.id,
       {
@@ -167,6 +194,21 @@ Deno.serve(async (req) => {
     );
 
     if (updateError) {
+      await service.from("audit_logs").insert({
+        actor_user_id: caller.id,
+        actor_role: "admin",
+        laboratory_id: payload.laboratoryId,
+        action: "admin_update",
+        entity_type: "laboratory_account",
+        entity_id: accountProfile.id,
+        before_data: { email: currentEmail },
+        after_data: { email: currentEmail },
+        metadata: {
+          operation: "email_change_failed",
+          request_id: emailChangeRequestId,
+        },
+      });
+
       return jsonResponse({ error: translateAuthError(updateError.message) }, 400);
     }
 
@@ -183,6 +225,23 @@ Deno.serve(async (req) => {
           email_confirm: true,
         },
       );
+
+      await service.from("audit_logs").insert({
+        actor_user_id: caller.id,
+        actor_role: "admin",
+        laboratory_id: payload.laboratoryId,
+        action: "admin_update",
+        entity_type: "laboratory_account",
+        entity_id: accountProfile.id,
+        before_data: { email: currentEmail },
+        after_data: { email: rollbackError ? email : currentEmail },
+        metadata: {
+          operation: rollbackError
+            ? "email_change_session_revoke_and_rollback_failed"
+            : "email_change_session_revoke_failed_rolled_back",
+          request_id: emailChangeRequestId,
+        },
+      });
 
       if (rollbackError) {
         return jsonResponse(
@@ -203,7 +262,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { error: auditError } = await service.from("audit_logs").insert({
+    const { error: completionAuditError } = await service.from("audit_logs").insert({
       actor_user_id: caller.id,
       actor_role: "admin",
       laboratory_id: payload.laboratoryId,
@@ -216,16 +275,17 @@ Deno.serve(async (req) => {
         sessions_revoked: true,
       },
       metadata: {
-        operation: "email_change",
+        operation: "email_change_completed",
+        request_id: emailChangeRequestId,
         revoked_sessions: Number(revokedSessions ?? 0),
       },
     });
 
-    if (auditError) {
+    if (completionAuditError) {
       return jsonResponse(
         {
           error:
-            "O e-mail foi alterado e as sessões foram encerradas, mas não foi possível registrar a auditoria. Verifique os logs administrativos.",
+            "O e-mail foi alterado e as sessões foram encerradas, mas não foi possível registrar a conclusão na auditoria. A solicitação inicial permanece registrada.",
         },
         500,
       );
