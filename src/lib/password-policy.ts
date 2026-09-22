@@ -1,9 +1,9 @@
 export const PASSWORD_POLICY_MESSAGE =
-  "A senha deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
+  "A senha deve ter pelo menos 8 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
 
 export function hasStrongPassword(password: string) {
   return (
-    password.length >= 12 &&
+    password.length >= 8 &&
     /[a-z]/.test(password) &&
     /[A-Z]/.test(password) &&
     /\d/.test(password) &&
