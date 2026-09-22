@@ -9,7 +9,7 @@ import { signInAdmin } from "@/lib/admin-session-api";
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
     meta: [
-      { title: "Login do Administrador — Agendamento de Provas" },
+      { title: "Login Administrativo | Indústria do Saber" },
       { name: "description", content: "Acesso à área administrativa do sistema." },
       { property: "og:title", content: "Login do Administrador" },
       { property: "og:description", content: "Acesso à área administrativa do sistema." },
@@ -50,6 +50,10 @@ function AdminLogin() {
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
       <Card className="w-full max-w-sm">
         <CardHeader>
+          <div className="mb-1 h-1 w-10 rounded-full bg-accent" aria-hidden="true" />
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            Indústria do Saber
+          </p>
           <CardTitle>Área Administrativa</CardTitle>
           <CardDescription>Entre com suas credenciais de administrador.</CardDescription>
         </CardHeader>

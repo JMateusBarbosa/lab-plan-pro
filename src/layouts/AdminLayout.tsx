@@ -113,8 +113,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
-        <Link to="/admin" className="truncate text-sm font-semibold sm:text-base">
-          Sistema de Agendamento de Provas
+        <Link to="/admin" className="min-w-0 truncate text-sm font-semibold sm:text-base">
+          <span className="text-primary">Indústria do Saber</span>
+          <span className="hidden text-muted-foreground sm:inline"> · Agendamento de Provas</span>
         </Link>
         <div className="ml-auto flex min-w-0 items-center gap-2">
           <span className="hidden max-w-64 truncate text-sm text-muted-foreground sm:inline">

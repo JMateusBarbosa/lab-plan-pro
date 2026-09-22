@@ -14,7 +14,7 @@ import {
 export const Route = createFileRoute("/laboratorio/login")({
   head: () => ({
     meta: [
-      { title: "Login do Laboratório — Agendamento de Provas" },
+      { title: "Login do Laboratório | Indústria do Saber" },
       { name: "description", content: "Acesso da equipe do laboratório ao agendamento de provas." },
       { property: "og:title", content: "Login do Laboratório" },
       {
@@ -61,6 +61,10 @@ function LaboratorioLogin() {
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
       <Card className="w-full max-w-sm">
         <CardHeader>
+          <div className="mb-1 h-1 w-10 rounded-full bg-accent" aria-hidden="true" />
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            Indústria do Saber
+          </p>
           <CardTitle>Área do Laboratório</CardTitle>
           <CardDescription>Entre com as credenciais do laboratório.</CardDescription>
         </CardHeader>
