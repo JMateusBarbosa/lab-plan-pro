@@ -21,7 +21,7 @@ function shouldApplyStrictCsp(request: Request) {
   if (!import.meta.env.PROD) return false;
 
   const hostname = new URL(request.url).hostname.toLowerCase();
-  return hostname !== "localhost" && hostname !== "127.0.0.1" && !hostname.includes("lovable");
+  return hostname !== "localhost" && hostname !== "127.0.0.1";
 }
 
 function buildContentSecurityPolicy(nonce: string) {
