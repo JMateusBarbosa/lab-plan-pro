@@ -30,9 +30,9 @@ type ProvisionPayload = {
   };
 };
 
-const MIN_PASSWORD_LENGTH = 12;
+const MIN_PASSWORD_LENGTH = 8;
 const PASSWORD_POLICY_MESSAGE =
-  "A senha provisória deve ter pelo menos 12 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
+  "A senha provisória deve ter pelo menos 8 caracteres e incluir letra maiúscula, letra minúscula, número e símbolo.";
 
 function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
