@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { PageHeader } from "@/components/PageHeader";
 import {
   auditActionLabels,
   auditEntityLabels,
@@ -251,14 +252,11 @@ function AdminAuditPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold sm:text-2xl">Auditoria</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Histórico imutável das alterações registradas pelo sistema.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+        <PageHeader
+          title="Auditoria"
+          description="Histórico imutável das alterações registradas pelo sistema."
+          actions={
+            <>
             <Button
               variant="outline"
               onClick={() => void handleCsvExport()}
@@ -273,8 +271,9 @@ function AdminAuditPage() {
             >
               {exportingFormat === "pdf" ? "Gerando PDF..." : "Exportar PDF"}
             </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         <Card>
           <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
