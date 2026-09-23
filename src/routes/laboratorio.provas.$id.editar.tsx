@@ -1,8 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { ExamForm } from "@/components/ExamForm";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   useLaboratoryExamQuery,
   useLaboratoryExamsQuery,
@@ -78,7 +87,27 @@ function EditarProva() {
   return (
     <LaboratoryLayout>
       <div className="space-y-6">
-        <h1 className="text-xl font-semibold sm:text-2xl">Editar prova</h1>
+        <PageHeader
+          title="Editar prova"
+          description={exam.studentName + " · " + exam.module}
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/laboratorio/provas">Provas</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/laboratorio/provas/$id" params={{ id }}>{exam.studentName}</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>Editar</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
+        />
         <ExamForm
           mode="edit"
           laboratory={session.laboratory}
