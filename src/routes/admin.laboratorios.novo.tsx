@@ -1,6 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { LaboratoryForm } from "@/components/LaboratoryForm";
 import { useProvisionLaboratoryMutation } from "@/lib/admin-laboratories-queries";
 
@@ -21,7 +22,25 @@ function NovoLaboratorio() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <h1 className="text-xl font-semibold sm:text-2xl">Cadastrar laboratório</h1>
+        <PageHeader
+          title="Cadastrar laboratório"
+          description="Cadastre a unidade, os horários e os dados de acesso do novo laboratório."
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin">Dashboard</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin/laboratorios">Laboratórios</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>Novo laboratório</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
+        />
         <LaboratoryForm
           mode="create"
           submitting={provision.isPending}
