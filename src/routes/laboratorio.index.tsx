@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { DashboardCard } from "@/components/DashboardCard";
 import { ExamStatusBadge } from "@/components/ExamStatusBadge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ function LaboratorioDashboard() {
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold sm:text-2xl">Dashboard</h1>
+            <PageHeader title="Dashboard" description="Acompanhe os agendamentos e as principais informações do laboratório." />
             <p className="text-sm text-muted-foreground">{session?.laboratory.schoolName}</p>
           </div>
           <Button asChild><Link to="/laboratorio/provas/nova">Agendar nova prova</Link></Button>
