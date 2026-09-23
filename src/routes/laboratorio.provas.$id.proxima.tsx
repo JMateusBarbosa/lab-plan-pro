@@ -2,7 +2,16 @@ import { useMemo, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -194,12 +203,27 @@ function ProximaTentativa() {
   return (
     <LaboratoryLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold sm:text-2xl">Agendar {nextLabel}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Aluno, módulo e origem já foram definidos pelo sistema. Escolha apenas quando e onde a próxima tentativa acontecerá.
-          </p>
-        </div>
+        <PageHeader
+          title={"Agendar " + nextLabel}
+          description="Aluno, módulo e origem já foram definidos pelo sistema. Escolha apenas quando e onde a próxima tentativa acontecerá."
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/laboratorio/provas">Provas</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/laboratorio/provas/$id" params={{ id: source.id }}>{source.studentName}</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>{nextLabel}</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
+        />
 
         <Card>
           <CardHeader><CardTitle className="text-base">Origem da próxima tentativa</CardTitle></CardHeader>

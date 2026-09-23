@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 interface AppShellProps {
   homeTo: "/admin" | "/laboratorio";
@@ -34,7 +35,13 @@ function Brand({
         className={compact ? "h-9 w-9 shrink-0 object-contain" : "h-11 w-11 shrink-0 object-contain"}
       />
       <div className="min-w-0">
-        <p className={compact ? "truncate text-sm font-semibold text-primary" : "truncate font-semibold text-primary"}>
+        <p
+          className={
+            compact
+              ? "truncate text-sm font-semibold text-primary"
+              : "truncate font-semibold text-primary"
+          }
+        >
           Indústria do Saber
         </p>
         {!compact ? (
@@ -55,14 +62,29 @@ export function AppShell({
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+
+    const closeOnDesktop = (event: MediaQueryListEvent | MediaQueryList) => {
+      if (event.matches) setMobileOpen(false);
+    };
+
+    closeOnDesktop(mediaQuery);
+    mediaQuery.addEventListener("change", closeOnDesktop);
+
+    return () => {
+      mediaQuery.removeEventListener("change", closeOnDesktop);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-brand-surface/45">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-sidebar md:flex">
-        <div className="flex h-20 items-center border-b px-5">
+        <div className="flex h-20 shrink-0 items-center border-b px-5">
           <Brand homeTo={homeTo} />
         </div>
 
-        <div className="min-h-0 flex-1 p-3">{renderSidebar()}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">{renderSidebar()}</div>
       </aside>
 
       <div className="min-h-screen md:pl-64">
@@ -105,33 +127,20 @@ export function AppShell({
           </div>
         </header>
 
-        {mobileOpen ? (
-          <div className="fixed inset-0 z-50 md:hidden">
-            <button
-              type="button"
-              aria-label="Fechar menu"
-              className="absolute inset-0 bg-black/45"
-              onClick={() => setMobileOpen(false)}
-            />
-            <aside className="relative flex h-full w-[min(19rem,86vw)] flex-col border-r bg-sidebar shadow-xl">
-              <div className="flex h-20 items-center justify-between gap-3 border-b px-4">
-                <Brand homeTo={homeTo} onNavigate={() => setMobileOpen(false)} />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Fechar menu"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              <div className="min-h-0 flex-1 p-3">
-                {renderSidebar(() => setMobileOpen(false))}
-              </div>
-            </aside>
-          </div>
-        ) : null}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent
+            side="left"
+            className="flex w-[min(19rem,86vw)] flex-col gap-0 bg-sidebar p-0 sm:max-w-none"
+          >
+            <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+            <div className="flex h-20 shrink-0 items-center border-b px-4 pr-14">
+              <Brand homeTo={homeTo} onNavigate={() => setMobileOpen(false)} />
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              {renderSidebar(() => setMobileOpen(false))}
+            </div>
+          </SheetContent>
+        </Sheet>
 
         <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">{children}</main>
       </div>

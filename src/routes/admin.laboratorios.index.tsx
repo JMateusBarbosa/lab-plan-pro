@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { LaboratoryCard } from "@/components/LaboratoryCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -78,12 +79,15 @@ function LaboratoriosPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-semibold sm:text-2xl">Laboratórios</h1>
-          <Button asChild>
-            <Link to="/admin/laboratorios/novo">Novo laboratório</Link>
-          </Button>
-        </div>
+        <PageHeader
+          title="Laboratórios"
+          description="Consulte, filtre e gerencie os laboratórios vinculados ao sistema."
+          actions={
+            <Button asChild>
+              <Link to="/admin/laboratorios/novo">Novo laboratório</Link>
+            </Button>
+          }
+        />
 
         <Card>
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row">

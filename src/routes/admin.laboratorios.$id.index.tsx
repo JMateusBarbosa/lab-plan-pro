@@ -2,9 +2,18 @@ import type { ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { DashboardCard } from "@/components/DashboardCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -84,21 +93,36 @@ function DetalhesLaboratorio() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold sm:text-2xl">{lab.name}</h1>
-            <p className="text-sm text-muted-foreground">{lab.schoolName}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>Editar laboratório</Link>
-            </Button>
-            <Button variant="outline" disabled={toggleStatus.isPending} onClick={() => void handleToggleStatus()}>
-              {lab.status === "ativo" ? "Desativar" : "Ativar"}
-            </Button>
-            <Button variant="ghost" onClick={() => navigate({ to: "/admin/laboratorios" })}>Voltar</Button>
-          </div>
-        </div>
+        <PageHeader
+          title={lab.name}
+          description={lab.schoolName}
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin">Dashboard</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin/laboratorios">Laboratórios</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>{lab.name}</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
+          actions={
+            <>
+              <Button asChild>
+                <Link to="/admin/laboratorios/$id/editar" params={{ id: lab.id }}>Editar laboratório</Link>
+              </Button>
+              <Button variant="outline" disabled={toggleStatus.isPending} onClick={() => void handleToggleStatus()}>
+                {lab.status === "ativo" ? "Desativar" : "Ativar"}
+              </Button>
+              <Button variant="ghost" onClick={() => navigate({ to: "/admin/laboratorios" })}>Voltar</Button>
+            </>
+          }
+        />
 
         <Card>
           <CardHeader><CardTitle className="text-base">Informações gerais</CardTitle></CardHeader>
