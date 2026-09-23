@@ -2,7 +2,16 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   Card,
   CardContent,
@@ -160,19 +169,32 @@ function CredenciaisLaboratorio() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold sm:text-2xl">Gerenciar credenciais</h1>
-            <p className="text-sm text-muted-foreground">
-              {details.laboratory.name} · {details.laboratory.schoolName}
-            </p>
-          </div>
-          <Button asChild variant="outline">
-            <Link to="/admin/laboratorios/$id" params={{ id }}>
-              Voltar ao laboratório
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          title="Gerenciar credenciais"
+          description={details.laboratory.name + " · " + details.laboratory.schoolName}
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin/laboratorios">Laboratórios</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/admin/laboratorios/$id" params={{ id }}>{details.laboratory.name}</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>Credenciais</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
+          actions={
+            <Button asChild variant="outline">
+              <Link to="/admin/laboratorios/$id" params={{ id }}>Voltar ao laboratório</Link>
+            </Button>
+          }
+        />
 
         <Card>
           <CardHeader>
