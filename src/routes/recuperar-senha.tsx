@@ -1,13 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AuthShell } from "@/components/AuthShell";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requestPasswordRecovery } from "@/lib/password-recovery-api";
@@ -59,67 +53,59 @@ function RecuperarSenha() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Recuperar senha</CardTitle>
-          <CardDescription>
-            Informe o e-mail usado para acessar o sistema. Se houver uma conta correspondente,
-            enviaremos um link para redefinir a senha.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {sent ? (
-            <div className="space-y-4">
-              <div className="rounded-md border bg-muted/30 p-4 text-sm">
-                <p className="font-medium">Verifique seu e-mail</p>
-                <p className="mt-1 text-muted-foreground">
-                  Se houver uma conta cadastrada com esse endereço, você receberá um link de
-                  recuperação. Verifique também a caixa de spam.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setSent(false);
-                  setError("");
-                }}
-              >
-                Enviar novamente
-              </Button>
-              <Button asChild variant="ghost" className="w-full">
-                <Link to="/">Voltar ao início</Link>
-              </Button>
+    <AuthShell
+      eyebrow="Segurança da conta"
+      title="Recuperar senha"
+      description="Informe o e-mail usado no sistema. Se houver uma conta correspondente, enviaremos um link seguro para criar uma nova senha."
+      note="Por segurança, o sistema não informa se o endereço está ou não cadastrado."
+    >
+      {sent ? (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-primary/15 bg-primary/5 p-4 text-sm">
+            <p className="font-medium text-foreground">Verifique seu e-mail</p>
+            <p className="mt-1 leading-6 text-muted-foreground">
+              Se houver uma conta cadastrada com esse endereço, você receberá um link de
+              recuperação. Verifique também a caixa de spam.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              setSent(false);
+              setError("");
+            }}
+          >
+            Enviar novamente
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">E-mail da conta</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              disabled={loading}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="seuemail@exemplo.com"
+            />
+          </div>
+
+          {error ? (
+            <div role="alert" className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {error}
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  disabled={loading}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </div>
+          ) : null}
 
-              {error ? <p className="text-xs text-destructive">{error}</p> : null}
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Enviando..." : "Enviar link de recuperação"}
-              </Button>
-
-              <Button asChild variant="ghost" className="w-full">
-                <Link to="/">Voltar ao início</Link>
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </main>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Enviando..." : "Enviar link de recuperação"}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   );
 }
