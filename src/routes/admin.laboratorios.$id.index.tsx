@@ -6,6 +6,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { DashboardCard } from "@/components/DashboardCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -88,6 +96,21 @@ function DetalhesLaboratorio() {
         <PageHeader
           title={lab.name}
           description={lab.schoolName}
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin">Dashboard</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin/laboratorios">Laboratórios</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>{lab.name}</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
           actions={
             <>
               <Button asChild>
