@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { DashboardCard } from "@/components/DashboardCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -55,12 +56,15 @@ function AdminDashboard() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-semibold sm:text-2xl">Dashboard</h1>
-          <Button asChild>
-            <Link to="/admin/laboratorios/novo">Cadastrar novo laboratório</Link>
-          </Button>
-        </div>
+        <PageHeader
+          title="Dashboard"
+          description="Acompanhe os laboratórios cadastrados e uma visão geral das provas agendadas."
+          actions={
+            <Button asChild>
+              <Link to="/admin/laboratorios/novo">Cadastrar novo laboratório</Link>
+            </Button>
+          }
+        />
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardCard title="Total de laboratórios" value={laboratories.length} />
