@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FlaskConical, Settings2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ function AccessCard({
   label,
   primary = false,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
   to: "/admin/login" | "/laboratorio/login";
