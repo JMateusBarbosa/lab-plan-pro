@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { ExamCard } from "@/components/ExamCard";
 import { ExamStatusBadge } from "@/components/ExamStatusBadge";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
@@ -110,10 +111,13 @@ function ProvasLista() {
   return (
     <LaboratoryLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-semibold sm:text-2xl">Provas</h1>
-          <Button asChild><Link to="/laboratorio/provas/nova">Agendar prova</Link></Button>
-        </div>
+        <PageHeader
+          title="Provas"
+          description="Consulte o histórico, filtre agendamentos e acompanhe as tentativas dos alunos."
+          actions={
+            <Button asChild><Link to="/laboratorio/provas/nova">Agendar prova</Link></Button>
+          }
+        />
 
         <Card>
           <CardContent className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
