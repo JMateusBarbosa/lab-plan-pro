@@ -1,9 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { ExamForm } from "@/components/ExamForm";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { useLaboratorySessionQuery } from "@/lib/laboratory-session-queries";
 import {
   useCreateLaboratoryExamMutation,
@@ -58,6 +66,21 @@ function NovaProva() {
         <PageHeader
           title="Agendar prova"
           description="Informe os dados da P1. Recuperações são criadas pelo fluxo da tentativa anterior."
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/laboratorio">Dashboard</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/laboratorio/provas">Provas</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>Agendar prova</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
         />
         <ExamForm
           mode="create"
