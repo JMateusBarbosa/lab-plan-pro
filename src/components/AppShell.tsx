@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,21 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+
+    const closeOnDesktop = (event: MediaQueryListEvent | MediaQueryList) => {
+      if (event.matches) setMobileOpen(false);
+    };
+
+    closeOnDesktop(mediaQuery);
+    mediaQuery.addEventListener("change", closeOnDesktop);
+
+    return () => {
+      mediaQuery.removeEventListener("change", closeOnDesktop);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-brand-surface/45">
