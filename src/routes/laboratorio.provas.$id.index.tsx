@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { LaboratoryLayout } from "@/layouts/LaboratoryLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { ExamStatusBadge } from "@/components/ExamStatusBadge";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { ExamResultDialog } from "@/components/ExamResultDialog";
@@ -96,28 +97,28 @@ function DetalhesProva() {
   return (
     <LaboratoryLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold sm:text-2xl">{exam.studentName}</h1>
-            <p className="text-sm text-muted-foreground">{exam.module}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <ExamResultDialog exam={exam} exams={exams} />
-            {canScheduleNext ? (
-              <Button asChild>
-                <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>Agendar próxima tentativa</Link>
-              </Button>
-            ) : null}
-            {nextExam ? (
-              <Button asChild variant="outline">
-                <Link to="/laboratorio/provas/$id" params={{ id: nextExam.id }}>Ver próxima tentativa</Link>
-              </Button>
-            ) : null}
-            <Button asChild variant="outline"><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar dados</Link></Button>
-            <Button variant="destructive" disabled={deleteExam.isPending} onClick={() => setConfirmOpen(true)}>Excluir</Button>
-            <Button variant="ghost" onClick={() => navigate({ to: "/laboratorio/provas" })}>Voltar</Button>
-          </div>
-        </div>
+        <PageHeader
+          title={exam.studentName}
+          description={exam.module}
+          actions={
+            <>
+              <ExamResultDialog exam={exam} exams={exams} />
+              {canScheduleNext ? (
+                <Button asChild>
+                  <Link to="/laboratorio/provas/$id/proxima" params={{ id: exam.id }}>Agendar próxima tentativa</Link>
+                </Button>
+              ) : null}
+              {nextExam ? (
+                <Button asChild variant="outline">
+                  <Link to="/laboratorio/provas/$id" params={{ id: nextExam.id }}>Ver próxima tentativa</Link>
+                </Button>
+              ) : null}
+              <Button asChild variant="outline"><Link to="/laboratorio/provas/$id/editar" params={{ id: exam.id }}>Editar dados</Link></Button>
+              <Button variant="destructive" disabled={deleteExam.isPending} onClick={() => setConfirmOpen(true)}>Excluir</Button>
+              <Button variant="ghost" onClick={() => navigate({ to: "/laboratorio/provas" })}>Voltar</Button>
+            </>
+          }
+        />
 
         <Card>
           <CardHeader><CardTitle className="text-base">Informações da prova</CardTitle></CardHeader>
