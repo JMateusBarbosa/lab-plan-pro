@@ -37,13 +37,18 @@ function LaboratorioDashboard() {
   return (
     <LaboratoryLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <PageHeader title="Dashboard" description="Acompanhe os agendamentos e as principais informações do laboratório." />
-            <p className="text-sm text-muted-foreground">{session?.laboratory.schoolName}</p>
-          </div>
-          <Button asChild><Link to="/laboratorio/provas/nova">Agendar nova prova</Link></Button>
-        </div>
+        <PageHeader
+          title="Dashboard"
+          description={
+            <>
+              Acompanhe os agendamentos e as principais informações de{" "}
+              <span className="font-medium text-foreground">{session?.laboratory.schoolName}</span>.
+            </>
+          }
+          actions={
+            <Button asChild><Link to="/laboratorio/provas/nova">Agendar nova prova</Link></Button>
+          }
+        />
 
         {isLoading ? <p className="text-sm text-muted-foreground">Carregando provas...</p> : null}
         {isError ? (
