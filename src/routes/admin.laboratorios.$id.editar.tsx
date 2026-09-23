@@ -1,8 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { LaboratoryForm } from "@/components/LaboratoryForm";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   useAdminLaboratoryQuery,
   useUpdateLaboratoryMutation,
@@ -65,7 +74,27 @@ function EditarLaboratorio() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <h1 className="text-xl font-semibold sm:text-2xl">Editar laboratório</h1>
+        <PageHeader
+          title="Editar laboratório"
+          description={lab.schoolName}
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/admin/laboratorios">Laboratórios</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/admin/laboratorios/$id" params={{ id }}>{lab.name}</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>Editar</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
+        />
         <LaboratoryForm
           mode="edit"
           initialValues={lab}
