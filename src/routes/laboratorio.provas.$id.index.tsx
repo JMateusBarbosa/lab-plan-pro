@@ -8,6 +8,14 @@ import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { ExamResultDialog } from "@/components/ExamResultDialog";
 import { ExamAttemptTimeline } from "@/components/ExamAttemptTimeline";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useDeleteLaboratoryExamMutation,
@@ -100,6 +108,21 @@ function DetalhesProva() {
         <PageHeader
           title={exam.studentName}
           description={exam.module}
+          breadcrumbs={
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/laboratorio">Dashboard</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild><Link to="/laboratorio/provas">Provas</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem><BreadcrumbPage>{exam.studentName}</BreadcrumbPage></BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          }
           actions={
             <>
               <ExamResultDialog exam={exam} exams={exams} />
