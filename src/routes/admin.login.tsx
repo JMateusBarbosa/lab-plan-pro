@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { AuthShell } from "@/components/AuthShell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInAdmin } from "@/lib/admin-session-api";
@@ -47,51 +47,52 @@ function AdminLogin() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <div className="mb-1 h-1 w-10 rounded-full bg-accent" aria-hidden="true" />
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            Indústria do Saber
-          </p>
-          <CardTitle>Área Administrativa</CardTitle>
-          <CardDescription>Entre com suas credenciais de administrador.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {error ? <p className="text-xs text-destructive">{error}</p> : null}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-            <Button asChild variant="link" className="w-full">
-              <Link to="/recuperar-senha">Esqueci minha senha</Link>
-            </Button>
-            <Button asChild variant="ghost" className="w-full">
-              <Link to="/">Voltar</Link>
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
+    <AuthShell
+      eyebrow="Área administrativa"
+      title="Entrar como administrador"
+      description="Use suas credenciais administrativas para gerenciar laboratórios, auditoria e configurações do sistema."
+      note="Acesso restrito a contas administrativas autorizadas."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            disabled={loading}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seuemail@exemplo.com"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Senha</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            disabled={loading}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        {error ? (
+          <div role="alert" className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
+
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Entrando..." : "Entrar"}
+        </Button>
+
+        <Button asChild variant="link" className="w-full">
+          <Link to="/recuperar-senha">Esqueci minha senha</Link>
+        </Button>
+      </form>
+    </AuthShell>
   );
 }
